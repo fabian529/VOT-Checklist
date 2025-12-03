@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOT Protokoll (V19 Stable)</title>
+    <title>VOT Protokoll (V20 Mobile Fix)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -17,33 +17,45 @@
         
         .input-group:focus-within label { transform: translateY(-22px) scale(0.85); color: #0071e3; }
         .input-filled label { transform: translateY(-22px) scale(0.85); }
+        
         .progress-fill { transition: width 0.5s ease-out; }
 
-        /* --- PRINT STYLES --- */
+        /* --- PRINT STYLES (THE FIX) --- */
         @media print {
             @page { margin: 15mm; size: A4; }
-            body { background-color: white; -webkit-print-color-adjust: exact; }
             
-            /* HIDE UI ELEMENTS */
+            /* Trick für Mobile: Body auf fixe Breite zwingen, damit es nicht responsive skaliert */
+            body { 
+                background-color: white; 
+                -webkit-print-color-adjust: exact; 
+                min-width: 1024px !important; /* Zwingt Handy in Desktop-Modus für PDF */
+                width: 100%;
+            }
+            
+            /* HIDE UI */
             .no-print, nav, aside, button, .sidebar, .bottom-bar { display: none !important; }
             
             /* SHOW PRINT VIEW */
             #print-view {
                 display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
                 width: 100%;
                 margin: 0;
                 padding: 0;
+                background: white;
             }
 
             .break-inside-avoid { page-break-inside: avoid; }
             
-            /* COLOR FIXES */
+            /* COLORS */
             h1, h2, h3, .pdf-label { color: #000 !important; }
             .pdf-header { border-bottom-color: #0071e3 !important; }
         }
 
-        /* --- PDF LAYOUT (SCREEN PREVIEW) --- */
-        #print-view { display: none; } /* Hidden in Edit Mode */
+        /* --- PDF LAYOUT STYLING --- */
+        #print-view { display: none; } 
         
         .preview-mode #print-view {
             display: block;
@@ -55,26 +67,30 @@
             border-radius: 8px;
         }
 
-        /* PDF Typography */
         .pdf-header { border-bottom: 2px solid #0071e3; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
         .pdf-title { font-size: 24pt; font-weight: 800; color: #1d1d1f; line-height: 1; }
         .pdf-subtitle { font-size: 10pt; color: #86868b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
         .pdf-meta { text-align: right; font-size: 10pt; color: #1d1d1f; }
         
         .pdf-section { margin-bottom: 40px; break-inside: avoid; }
-        .pdf-section-title { font-size: 14pt; font-weight: 700; color: #1d1d1f; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; margin-bottom: 20px; }
+        .pdf-section-title { font-size: 14pt; font-weight: 700; color: #1d1d1f; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; margin-bottom: 15px; }
         
         .pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 40px; margin-bottom: 20px; }
         .pdf-field { margin-bottom: 5px; }
         .pdf-label { font-size: 8pt; color: #86868b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
         .pdf-value { font-size: 11pt; color: #1d1d1f; font-weight: 500; border-bottom: 1px dotted #e5e5e5; padding-bottom: 2px; }
 
-        /* --- BIG PHOTO STYLES --- */
+        /* --- BIG PHOTO FIX --- */
         .pdf-photos { margin-top: 25px; width: 100%; }
         .pdf-photo-title { font-size: 10pt; font-weight: 700; color: #1d1d1f; margin-bottom: 10px; border-left: 4px solid #0071e3; padding-left: 10px; text-transform: uppercase; }
         
-        /* 1 COLUMN GRID FOR MAX SIZE */
-        .pdf-photo-list { display: flex; flex-direction: column; gap: 30px; width: 100%; }
+        /* FORCE 1 COLUMN (STACKED) FOR MAX SIZE ON ALL DEVICES */
+        .pdf-photo-list { 
+            display: flex; 
+            flex-direction: column; /* Immer untereinander */
+            gap: 30px; 
+            width: 100%; 
+        }
         
         .pdf-img-container { 
             width: 100%;
@@ -89,7 +105,7 @@
         .pdf-img { 
             width: 100%; 
             height: auto; 
-            max-height: 800px; /* Max height to fit on page */
+            max-height: 850px; /* Fast ganze Seite hoch */
             object-fit: contain; 
             display: block;
         }
@@ -223,165 +239,6 @@
         </div>
     );
 
-    // --- PREVIEW LAYOUT ---
-    const PreviewLayout = ({ data, photos }) => {
-        const renderField = (label, value) => (
-            <div className="pdf-field">
-                <div className="pdf-label">{label}</div>
-                <div className="pdf-value">{value || '-'}</div>
-            </div>
-        );
-        const renderBool = (v) => v ? "Ja" : "Nein";
-        
-        // BIG PHOTO RENDERER
-        const renderPhotoGrid = (id, title) => {
-            const pics = photos[id] || [];
-            if(pics.length === 0) return null;
-            return (
-                <div className="pdf-photos">
-                    <div className="pdf-photo-title">{title} ({pics.length})</div>
-                    <div className="pdf-photo-list">
-                        {pics.map((src, i) => (
-                            <div key={i} className="pdf-img-container">
-                                <img src={src} className="pdf-img" />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )
-        };
-
-        return (
-            <div id="print-view">
-                {/* Header */}
-                <div className="pdf-header">
-                    <div>
-                        <div className="pdf-title">VOT Protokoll</div>
-                        <div className="pdf-subtitle">Mission Solar | Technische Aufnahme</div>
-                    </div>
-                    <div className="pdf-meta">
-                        <div style={{fontWeight: 700}}>{data.lastName} {data.firstName}</div>
-                        <div>{new Date().toLocaleDateString()}</div>
-                    </div>
-                </div>
-
-                {/* 1. KUNDE */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">1. Kundendaten</div>
-                    <div className="pdf-grid">
-                        {renderField("Name", `${data.firstName} ${data.lastName}`)}
-                        {renderField("Email", data.email)}
-                        {renderField("Vollmacht", renderBool(data.proxySigned))}
-                        {renderField("Rechnungsempfänger", data.invoiceRecipientChecked ? "Identisch" : "Abweichend")}
-                        {!data.invoiceRecipientChecked && renderField("Abweichend Info", `${data.invoiceName}, ${data.invoiceAddress}`)}
-                    </div>
-                    {renderPhotoGrid('foto_vollmacht', 'Vollmacht')}
-                </div>
-
-                {/* 2. ROUTING */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">2. Routing & Heizraum</div>
-                    <div className="pdf-grid">
-                        {renderField("Rohrweg Innen", `${data.routingPipeLengthInner} m`)}
-                        {renderField("Kabelweg Innen", `${data.routingCableLengthInner} m`)}
-                    </div>
-                    <div style={{ marginTop: 10 }}>
-                        {renderField("Notizen", data.routingNotes)}
-                    </div>
-                    {renderPhotoGrid('foto_heizraum', 'Heizraum & Platzierung')}
-                    {renderPhotoGrid('foto_routing', 'Leitungswege')}
-                </div>
-
-                {/* 3. GEBÄUDE */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">3. Gebäudehülle</div>
-                    <div className="pdf-grid">
-                        {renderField("Heizung Bestand", data.heatingType)}
-                        {renderField("Verbrauch", data.consumption)}
-                        {renderField("Beheizte Fläche", `${data.heatedArea} m²`)}
-                        {renderField("Warm genug?", renderBool(data.houseWarmEnough))}
-                    </div>
-                    <div style={{ marginTop: 15, marginBottom: 10, fontWeight: 700, fontSize: '10pt' }}>Details Dämmung</div>
-                    <div className="pdf-grid">
-                        {renderField("Fenster", data.insulationWindows === 'Sonstige' ? data.insulationWindowsNote : data.insulationWindows)}
-                        {renderField("Wand", `${data.insulationFacadeMaterial} (${data.insulationFacadeThickness} cm)`)}
-                        {renderField("Dach", `${data.insulationRoofMaterial} (${data.insulationRoofThickness} cm)`)}
-                    </div>
-                    {renderPhotoGrid('foto_energieausweis', 'Energieausweis')}
-                    {renderPhotoGrid('foto_heizung_allgemein', 'Gebäude')}
-                </div>
-
-                {/* 4. AUSSEN */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">4. Außenanlage</div>
-                    <div className="pdf-grid">
-                        {renderField("Lärm (Ecke)", renderBool(data.noiseAmplifier))}
-                        {data.noiseAmplifier && renderField("Anpassung nötig", data.noiseNotes)}
-                        {renderField("Alpine Gefahr", renderBool(data.alpineHazard))}
-                    </div>
-                    {renderPhotoGrid('foto_aussen', 'Standort Außen')}
-                </div>
-
-                {/* 5. TECHNIK */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">5. Wanddurchführung</div>
-                    <div className="pdf-grid">
-                        {renderField("Wandstärke", `${data.wallThickness} cm`)}
-                        {renderField("Material", data.wallMaterial)}
-                        {renderField("Abdichtung", renderBool(data.sealingNeeded))}
-                    </div>
-                    {renderPhotoGrid('foto_wand', 'Wanddurchführung')}
-                </div>
-
-                {/* 6. HYDRAULIK */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">6. Hydraulik</div>
-                    <div className="pdf-grid">
-                        {renderField("Rohre", data.pipeMaterial)}
-                        {renderField("Dimension", data.pipeDimension)}
-                        {renderField("Engste Tür", `${data.narrowestDoor} cm`)}
-                        {renderField("Treppe OK?", data.criticalStairs ? "Kritisch" : "OK")}
-                    </div>
-                    {renderPhotoGrid('foto_hydraulik', 'Hydraulik Bestand')}
-                </div>
-
-                {/* 7. ELEKTRIK */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">7. Elektrik</div>
-                    <div className="pdf-grid">
-                        {renderField("Hauptsicherung", `${data.elecMainFuse} A`)}
-                        {renderField("Platz (HLAK)", renderBool(data.elecSpaceAvailable))}
-                        {renderField("Erdungsschiene", renderBool(data.elecGroundingBar))}
-                        {renderField("EVU Signal", renderBool(data.elecSignalAvailable))}
-                        {renderField("Kabel Außen", `${data.elecCableLength} m`)}
-                        {renderField("Durchführung", data.elecWallBreakthrough)}
-                        {renderField("Internet", renderBool(data.internetAvailable))}
-                        {!data.internetAvailable && renderField("Internet Lösung", data.internetNotes)}
-                    </div>
-                    <div style={{marginTop: 10}}>{renderField("Notizen Elektrik", data.elecNotes)}</div>
-                    {renderPhotoGrid('foto_elektrik', 'Elektrik Fotos')}
-                </div>
-
-                {/* 8. STATUS */}
-                <div className="pdf-section">
-                    <div className="pdf-section-title">8. Status & Logistik</div>
-                    <div className="pdf-grid">
-                        {renderField("Pufferspeicher", data.statusBuffer === 'sold' ? 'Gekauft' : data.statusBuffer === 'upsell' ? 'Interesse' : 'Nein')}
-                        {renderField("Warmwasser", data.statusWater === 'sold' ? 'Gekauft' : data.statusWater === 'upsell' ? 'Interesse' : 'Nein')}
-                        {renderField("PV Integration", data.statusPV === 'sold' ? 'Gekauft' : data.statusPV === 'upsell' ? 'Interesse' : 'Nein')}
-                        {renderField("Ablageort", data.deliveryLocation)}
-                    </div>
-                    {renderPhotoGrid('foto_ablageort', 'Ablageort')}
-                    
-                    <div style={{ marginTop: 20, padding: 15, backgroundColor: '#fffcf0', border: '1px solid #e6dbb9', borderRadius: 4 }}>
-                        <div style={{color: '#b58b00', fontWeight: 700, fontSize: '10pt', textTransform: 'uppercase', marginBottom: 5 }}>Kundenwünsche</div>
-                        <div style={{fontSize: '10pt'}}>{data.customerWishes || "Keine besonderen Wünsche vermerkt."}</div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
     // --- MAIN APP ---
     function App() {
         const [view, setView] = useState('input');
@@ -437,6 +294,165 @@
             link.click();
         };
 
+        // --- PREVIEW LAYOUT ---
+        const PreviewLayout = () => {
+            const renderField = (label, value) => (
+                <div className="pdf-field">
+                    <div className="pdf-label">{label}</div>
+                    <div className="pdf-value">{value || '-'}</div>
+                </div>
+            );
+            const renderBool = (v) => v ? "Ja" : "Nein";
+            
+            // FULL WIDTH PHOTO RENDERER
+            const renderPhotoGrid = (id, title) => {
+                const pics = photos[id] || [];
+                if(pics.length === 0) return null;
+                return (
+                    <div className="pdf-photos">
+                        <div className="pdf-photo-title">{title} ({pics.length})</div>
+                        <div className="pdf-photo-list">
+                            {pics.map((src, i) => (
+                                <div key={i} className="pdf-img-container">
+                                    <img src={src} className="pdf-img" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )
+            };
+
+            return (
+                <div id="print-view">
+                    {/* Header */}
+                    <div className="pdf-header">
+                        <div>
+                            <div className="pdf-title">VOT Protokoll</div>
+                            <div className="pdf-subtitle">Mission Solar | Technische Aufnahme</div>
+                        </div>
+                        <div className="pdf-meta">
+                            <div style={{fontWeight: 700}}>{data.lastName} {data.firstName}</div>
+                            <div>{new Date().toLocaleDateString()}</div>
+                        </div>
+                    </div>
+
+                    {/* 1. KUNDE */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">1. Kundendaten</div>
+                        <div className="pdf-grid">
+                            {renderField("Name", `${data.firstName} ${data.lastName}`)}
+                            {renderField("Email", data.email)}
+                            {renderField("Vollmacht", renderBool(data.proxySigned))}
+                            {renderField("Rechnungsempfänger", data.invoiceRecipientChecked ? "Identisch" : "Abweichend")}
+                            {!data.invoiceRecipientChecked && renderField("Abweichend Info", `${data.invoiceName}, ${data.invoiceAddress}`)}
+                        </div>
+                        {renderPhotoGrid('foto_vollmacht', 'Vollmacht')}
+                    </div>
+
+                    {/* 2. ROUTING */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">2. Routing & Heizraum</div>
+                        <div className="pdf-grid">
+                            {renderField("Rohrweg Innen", `${data.routingPipeLengthInner} m`)}
+                            {renderField("Kabelweg Innen", `${data.routingCableLengthInner} m`)}
+                        </div>
+                        <div style={{ marginTop: 10 }}>
+                            {renderField("Notizen", data.routingNotes)}
+                        </div>
+                        {renderPhotoGrid('foto_heizraum', 'Heizraum & Platzierung')}
+                        {renderPhotoGrid('foto_routing', 'Leitungswege')}
+                    </div>
+
+                    {/* 3. GEBÄUDE */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">3. Gebäudehülle</div>
+                        <div className="pdf-grid">
+                            {renderField("Heizung Bestand", data.heatingType)}
+                            {renderField("Verbrauch", data.consumption)}
+                            {renderField("Beheizte Fläche", `${data.heatedArea} m²`)}
+                            {renderField("Warm genug?", renderBool(data.houseWarmEnough))}
+                        </div>
+                        <div style={{ marginTop: 15, marginBottom: 10, fontWeight: 700, fontSize: '10pt' }}>Details Dämmung</div>
+                        <div className="pdf-grid">
+                            {renderField("Fenster", data.insulationWindows === 'Sonstige' ? data.insulationWindowsNote : data.insulationWindows)}
+                            {renderField("Wand", `${data.insulationFacadeMaterial} (${data.insulationFacadeThickness} cm)`)}
+                            {renderField("Dach", `${data.insulationRoofMaterial} (${data.insulationRoofThickness} cm)`)}
+                        </div>
+                        {renderPhotoGrid('foto_energieausweis', 'Energieausweis')}
+                        {renderPhotoGrid('foto_heizung_allgemein', 'Gebäude')}
+                    </div>
+
+                    {/* 4. AUSSEN */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">4. Außenanlage</div>
+                        <div className="pdf-grid">
+                            {renderField("Lärm (Ecke)", renderBool(data.noiseAmplifier))}
+                            {data.noiseAmplifier && renderField("Anpassung nötig", data.noiseNotes)}
+                            {renderField("Alpine Gefahr", renderBool(data.alpineHazard))}
+                        </div>
+                        {renderPhotoGrid('foto_aussen', 'Standort Außen')}
+                    </div>
+
+                    {/* 5. TECHNIK */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">5. Wanddurchführung</div>
+                        <div className="pdf-grid">
+                            {renderField("Wandstärke", `${data.wallThickness} cm`)}
+                            {renderField("Material", data.wallMaterial)}
+                            {renderField("Abdichtung", renderBool(data.sealingNeeded))}
+                        </div>
+                        {renderPhotoGrid('foto_wand', 'Wanddurchführung')}
+                    </div>
+
+                    {/* 6. HYDRAULIK */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">6. Hydraulik</div>
+                        <div className="pdf-grid">
+                            {renderField("Rohre", data.pipeMaterial)}
+                            {renderField("Dimension", data.pipeDimension)}
+                            {renderField("Engste Tür", `${data.narrowestDoor} cm`)}
+                            {renderField("Treppe OK?", data.criticalStairs ? "Kritisch" : "OK")}
+                        </div>
+                        {renderPhotoGrid('foto_hydraulik', 'Hydraulik Bestand')}
+                    </div>
+
+                    {/* 7. ELEKTRIK */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">7. Elektrik</div>
+                        <div className="pdf-grid">
+                            {renderField("Hauptsicherung", `${data.elecMainFuse} A`)}
+                            {renderField("Platz (HLAK)", renderBool(data.elecSpaceAvailable))}
+                            {renderField("Erdungsschiene", renderBool(data.elecGroundingBar))}
+                            {renderField("EVU Signal", renderBool(data.elecSignalAvailable))}
+                            {renderField("Kabel Außen", `${data.elecCableLength} m`)}
+                            {renderField("Durchführung", data.elecWallBreakthrough)}
+                            {renderField("Internet", renderBool(data.internetAvailable))}
+                            {!data.internetAvailable && renderField("Internet Lösung", data.internetNotes)}
+                        </div>
+                        <div style={{marginTop: 10}}>{renderField("Notizen Elektrik", data.elecNotes)}</div>
+                        {renderPhotoGrid('foto_elektrik', 'Elektrik Fotos')}
+                    </div>
+
+                    {/* 8. STATUS */}
+                    <div className="pdf-section">
+                        <div className="pdf-section-title">8. Status & Logistik</div>
+                        <div className="pdf-grid">
+                            {renderField("Pufferspeicher", data.statusBuffer === 'sold' ? 'Gekauft' : data.statusBuffer === 'upsell' ? 'Interesse' : 'Nein')}
+                            {renderField("Warmwasser", data.statusWater === 'sold' ? 'Gekauft' : data.statusWater === 'upsell' ? 'Interesse' : 'Nein')}
+                            {renderField("PV Integration", data.statusPV === 'sold' ? 'Gekauft' : data.statusPV === 'upsell' ? 'Interesse' : 'Nein')}
+                            {renderField("Ablageort", data.deliveryLocation)}
+                        </div>
+                        {renderPhotoGrid('foto_ablageort', 'Ablageort')}
+                        
+                        <div style={{ marginTop: 20, padding: 15, backgroundColor: '#fffcf0', border: '1px solid #e6dbb9', borderRadius: 4 }}>
+                            <div style={{color: '#b58b00', fontWeight: 700, fontSize: '10pt', textTransform: 'uppercase', marginBottom: 5 }}>Kundenwünsche</div>
+                            <div style={{fontSize: '10pt'}}>{data.customerWishes || "Keine besonderen Wünsche vermerkt."}</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         // --- CHECK STATUS HELPER ---
         const isSectionComplete = (section) => {
             if(section === 'sec-1') return data.lastName && data.email;
@@ -455,6 +471,14 @@
                 </button>
             )
         }
+
+        const handleJsonExport = () => {
+            const blob = new Blob([JSON.stringify({ ...data, photos }, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `VOT_${data.lastName}.json`;
+            link.click();
+        };
 
         // --- RENDER BASED ON VIEW ---
         return (
@@ -480,7 +504,7 @@
                             </div>
                         </div>
                         <div className="py-8">
-                            <PreviewLayout data={data} photos={photos} />
+                            <PreviewLayout />
                         </div>
                     </div>
                 ) : (
@@ -489,7 +513,7 @@
                         <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-[#d2d2d7] no-print">
                             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
                                 <div className="font-semibold text-lg">Mission Solar <span className="text-gray-400 text-sm">| VOT</span></div>
-                                <div className="text-xs bg-gray-100 px-2 py-1 rounded">V19 Stable</div>
+                                <div className="text-xs bg-gray-100 px-2 py-1 rounded">V19 Final</div>
                             </div>
                         </nav>
 
