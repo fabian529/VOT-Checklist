@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VOT Protokoll (V19 Stable)</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f5f5f7; color: #1d1d1f; }
+        
+        .input-group:focus-within label { transform: translateY(-22px) scale(0.85); color: #0071e3; }
+        .input-filled label { transform: translateY(-22px) scale(0.85); }
+        .progress-fill { transition: width 0.5s ease-out; }
+
+        /* --- PRINT STYLES --- */
+        @media print {
+            @page { margin: 15mm; size: A4; }
+            body { background-color: white; -webkit-print-color-adjust: exact; }
+            
+            /* HIDE UI ELEMENTS */
+            .no-print, nav, aside, button, .sidebar, .bottom-bar { display: none !important; }
+            
+            /* SHOW PRINT VIEW */
+            #print-view {
+                display: block !important;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            .break-inside-avoid { page-break-inside: avoid; }
+            
+            /* COLOR FIXES */
+            h1, h2, h3, .pdf-label { color: #000 !important; }
+            .pdf-header { border-bottom-color: #0071e3 !important; }
+        }
+
+        /* --- PDF LAYOUT (SCREEN PREVIEW) --- */
+        #print-view { display: none; } /* Hidden in Edit Mode */
+        
+        .preview-mode #print-view {
+            display: block;
+            margin: 20px auto;
+            max-width: 210mm;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 40px;
+            border-radius: 8px;
+        }
+
+        /* PDF Typography */
+        .pdf-header { border-bottom: 2px solid #0071e3; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .pdf-title { font-size: 24pt; font-weight: 800; color: #1d1d1f; line-height: 1; }
+        .pdf-subtitle { font-size: 10pt; color: #86868b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+        .pdf-meta { text-align: right; font-size: 10pt; color: #1d1d1f; }
+        
+        .pdf-section { margin-bottom: 40px; break-inside: avoid; }
+        .pdf-section-title { font-size: 14pt; font-weight: 700; color: #1d1d1f; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; margin-bottom: 20px; }
+        
+        .pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 40px; margin-bottom: 20px; }
+        .pdf-field { margin-bottom: 5px; }
+        .pdf-label { font-size: 8pt; color: #86868b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .pdf-value { font-size: 11pt; color: #1d1d1f; font-weight: 500; border-bottom: 1px dotted #e5e5e5; padding-bottom: 2px; }
+
+        /* --- BIG PHOTO STYLES --- */
+        .pdf-photos { margin-top: 25px; width: 100%; }
+        .pdf-photo-title { font-size: 10pt; font-weight: 700; color: #1d1d1f; margin-bottom: 10px; border-left: 4px solid #0071e3; padding-left: 10px; text-transform: uppercase; }
+        
+        /* 1 COLUMN GRID FOR MAX SIZE */
+        .pdf-photo-list { display: flex; flex-direction: column; gap: 30px; width: 100%; }
+        
+        .pdf-img-container { 
+            width: 100%;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        
+        .pdf-img { 
+            width: 100%; 
+            height: auto; 
+            max-height: 800px; /* Max height to fit on page */
+            object-fit: contain; 
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- ICONS ---
+    const Icon = ({ path, size = 18, className = "" }) => (
+        <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{__html: path}} />
+    );
+
+    const icons = {
+        user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>',
+        home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>',
+        camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle>',
+        trash: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>',
+        plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+        print: '<polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect>',
+        edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>',
+        check: '<polyline points="20 6 9 17 4 12"></polyline>',
+        zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>',
+        thermometer: '<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path>',
+        ruler: '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"></path>',
+        wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>',
+        layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline>',
+        route: '<path d="M9 18l6-6-6-6"></path>',
+        chart: '<line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>',
+        json: '<polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>'
+    };
+
+    // --- PHOTO MANAGER ---
+    const PhotoManager = ({ id, label, photos, setPhotos }) => {
+        const fileInputRef = useRef(null);
+        const currentPhotos = photos[id] || [];
+        const handleFileChange = (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length > 0) {
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setPhotos(prev => ({ ...prev, [id]: [...(prev[id] || []), reader.result] }));
+                    reader.readAsDataURL(file);
+                });
+            }
+            e.target.value = null;
+        };
+        const handleRemove = (index) => setPhotos(prev => ({ ...prev, [id]: prev[id].filter((_, i) => i !== index) }));
+
+        return (
+            <div className="mt-4 break-inside-avoid">
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" multiple className="hidden" />
+                <div className="flex justify-between items-end mb-2">
+                    <label className="text-sm font-semibold text-[#1d1d1f]">{label}</label>
+                    <span className="text-xs text-[#86868b] border px-2 py-0.5 rounded">{currentPhotos.length} Bilder</span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    {currentPhotos.map((photo, index) => (
+                        <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-[#d2d2d7] bg-black group">
+                            <img src={photo} className="w-full h-full object-cover" />
+                            <button onClick={() => handleRemove(index)} className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow hover:bg-red-600 z-10"><Icon path={icons.trash} size={12} /></button>
+                        </div>
+                    ))}
+                    <div onClick={() => fileInputRef.current.click()} className="aspect-square rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#fbfbfd] hover:bg-[#f0f8ff] hover:border-[#0071e3] cursor-pointer flex flex-col items-center justify-center gap-1 transition-all">
+                        <Icon path={icons.plus} size={24} className="text-[#0071e3]" />
+                        <span className="text-[10px] font-medium text-[#86868b]">Hinzufügen</span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- FORM COMPONENTS ---
+    const Section = ({ id, icon, title, children }) => (
+        <section id={id} className="bg-white p-6 rounded-2xl shadow-sm border border-[#d2d2d7] mb-8 animate-in break-inside-avoid scroll-mt-24">
+            <div className="flex items-center gap-3 mb-6 border-b border-[#f5f5f7] pb-4">
+                <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f]"><Icon path={icon} size={16} /></div>
+                <h2 className="text-[17px] font-semibold text-[#1d1d1f]">{title}</h2>
+            </div>
+            <div className="space-y-6">{children}</div>
+        </section>
+    );
+
+    const TextInput = ({ label, value, onChange, width = "full", suffix, type="text" }) => (
+        <div className={`bg-[#f5f5f7] rounded-xl px-4 py-2 border border-transparent focus-within:bg-white focus-within:border-[#0071e3] transition-all ${width === 'half' ? 'col-span-1' : 'col-span-2'}`}>
+            <label className="block text-xs text-[#86868b] mb-1">{label}</label>
+            <div className="flex items-center">
+                <input type={type} value={value} onChange={onChange} className="w-full bg-transparent outline-none text-[#1d1d1f]" />
+                {suffix && <span className="text-xs text-[#86868b] ml-1">{suffix}</span>}
+            </div>
+        </div>
+    );
+
+    const SelectInput = ({ label, value, onChange, options }) => (
+        <div className="bg-[#f5f5f7] rounded-xl px-4 py-2 border border-transparent focus-within:bg-white focus-within:border-[#0071e3] col-span-2 md:col-span-1">
+            <label className="block text-xs text-[#86868b] mb-1">{label}</label>
+            <select value={value} onChange={onChange} className="w-full bg-transparent outline-none text-[#1d1d1f] cursor-pointer appearance-none">
+                <option value="">Bitte wählen...</option>
+                {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+            </select>
+        </div>
+    );
+
+    const Toggle = ({ label, checked, onChange }) => (
+        <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+            <span className="text-sm text-[#1d1d1f]">{label}</span>
+            <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={checked} onChange={onChange} />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#34c759]"></div>
+            </label>
+        </div>
+    );
+
+    const ProductStatus = ({ label, value, onChange }) => (
+        <div className="bg-[#f5f5f7] p-3 rounded-xl col-span-2 md:col-span-1">
+            <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold text-sm">{label}</span>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${value === 'sold' ? 'bg-green-100 text-green-700' : value === 'upsell' ? 'bg-orange-100 text-orange-700' : 'bg-gray-200 text-gray-500'}`}>
+                    {value === 'sold' ? 'Verkauft' : value === 'upsell' ? 'Upsell' : 'Offen'}
+                </span>
+            </div>
+            <div className="flex gap-1">
+                <button onClick={() => onChange('sold')} className={`flex-1 py-1.5 text-xs rounded border transition-colors ${value === 'sold' ? 'bg-[#34c759] text-white border-[#34c759]' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Gekauft</button>
+                <button onClick={() => onChange('upsell')} className={`flex-1 py-1.5 text-xs rounded border transition-colors ${value === 'upsell' ? 'bg-[#ff9500] text-white border-[#ff9500]' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Upsell</button>
+                <button onClick={() => onChange('none')} className={`flex-1 py-1.5 text-xs rounded border transition-colors ${value === 'none' ? 'bg-gray-600 text-white border-gray-600' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Kein</button>
+            </div>
+        </div>
+    );
+
+    // --- PREVIEW LAYOUT ---
+    const PreviewLayout = ({ data, photos }) => {
+        const renderField = (label, value) => (
+            <div className="pdf-field">
+                <div className="pdf-label">{label}</div>
+                <div className="pdf-value">{value || '-'}</div>
+            </div>
+        );
+        const renderBool = (v) => v ? "Ja" : "Nein";
+        
+        // BIG PHOTO RENDERER
+        const renderPhotoGrid = (id, title) => {
+            const pics = photos[id] || [];
+            if(pics.length === 0) return null;
+            return (
+                <div className="pdf-photos">
+                    <div className="pdf-photo-title">{title} ({pics.length})</div>
+                    <div className="pdf-photo-list">
+                        {pics.map((src, i) => (
+                            <div key={i} className="pdf-img-container">
+                                <img src={src} className="pdf-img" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )
+        };
+
+        return (
+            <div id="print-view">
+                {/* Header */}
+                <div className="pdf-header">
+                    <div>
+                        <div className="pdf-title">VOT Protokoll</div>
+                        <div className="pdf-subtitle">Mission Solar | Technische Aufnahme</div>
+                    </div>
+                    <div className="pdf-meta">
+                        <div style={{fontWeight: 700}}>{data.lastName} {data.firstName}</div>
+                        <div>{new Date().toLocaleDateString()}</div>
+                    </div>
+                </div>
+
+                {/* 1. KUNDE */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">1. Kundendaten</div>
+                    <div className="pdf-grid">
+                        {renderField("Name", `${data.firstName} ${data.lastName}`)}
+                        {renderField("Email", data.email)}
+                        {renderField("Vollmacht", renderBool(data.proxySigned))}
+                        {renderField("Rechnungsempfänger", data.invoiceRecipientChecked ? "Identisch" : "Abweichend")}
+                        {!data.invoiceRecipientChecked && renderField("Abweichend Info", `${data.invoiceName}, ${data.invoiceAddress}`)}
+                    </div>
+                    {renderPhotoGrid('foto_vollmacht', 'Vollmacht')}
+                </div>
+
+                {/* 2. ROUTING */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">2. Routing & Heizraum</div>
+                    <div className="pdf-grid">
+                        {renderField("Rohrweg Innen", `${data.routingPipeLengthInner} m`)}
+                        {renderField("Kabelweg Innen", `${data.routingCableLengthInner} m`)}
+                    </div>
+                    <div style={{ marginTop: 10 }}>
+                        {renderField("Notizen", data.routingNotes)}
+                    </div>
+                    {renderPhotoGrid('foto_heizraum', 'Heizraum & Platzierung')}
+                    {renderPhotoGrid('foto_routing', 'Leitungswege')}
+                </div>
+
+                {/* 3. GEBÄUDE */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">3. Gebäudehülle</div>
+                    <div className="pdf-grid">
+                        {renderField("Heizung Bestand", data.heatingType)}
+                        {renderField("Verbrauch", data.consumption)}
+                        {renderField("Beheizte Fläche", `${data.heatedArea} m²`)}
+                        {renderField("Warm genug?", renderBool(data.houseWarmEnough))}
+                    </div>
+                    <div style={{ marginTop: 15, marginBottom: 10, fontWeight: 700, fontSize: '10pt' }}>Details Dämmung</div>
+                    <div className="pdf-grid">
+                        {renderField("Fenster", data.insulationWindows === 'Sonstige' ? data.insulationWindowsNote : data.insulationWindows)}
+                        {renderField("Wand", `${data.insulationFacadeMaterial} (${data.insulationFacadeThickness} cm)`)}
+                        {renderField("Dach", `${data.insulationRoofMaterial} (${data.insulationRoofThickness} cm)`)}
+                    </div>
+                    {renderPhotoGrid('foto_energieausweis', 'Energieausweis')}
+                    {renderPhotoGrid('foto_heizung_allgemein', 'Gebäude')}
+                </div>
+
+                {/* 4. AUSSEN */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">4. Außenanlage</div>
+                    <div className="pdf-grid">
+                        {renderField("Lärm (Ecke)", renderBool(data.noiseAmplifier))}
+                        {data.noiseAmplifier && renderField("Anpassung nötig", data.noiseNotes)}
+                        {renderField("Alpine Gefahr", renderBool(data.alpineHazard))}
+                    </div>
+                    {renderPhotoGrid('foto_aussen', 'Standort Außen')}
+                </div>
+
+                {/* 5. TECHNIK */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">5. Wanddurchführung</div>
+                    <div className="pdf-grid">
+                        {renderField("Wandstärke", `${data.wallThickness} cm`)}
+                        {renderField("Material", data.wallMaterial)}
+                        {renderField("Abdichtung", renderBool(data.sealingNeeded))}
+                    </div>
+                    {renderPhotoGrid('foto_wand', 'Wanddurchführung')}
+                </div>
+
+                {/* 6. HYDRAULIK */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">6. Hydraulik</div>
+                    <div className="pdf-grid">
+                        {renderField("Rohre", data.pipeMaterial)}
+                        {renderField("Dimension", data.pipeDimension)}
+                        {renderField("Engste Tür", `${data.narrowestDoor} cm`)}
+                        {renderField("Treppe OK?", data.criticalStairs ? "Kritisch" : "OK")}
+                    </div>
+                    {renderPhotoGrid('foto_hydraulik', 'Hydraulik Bestand')}
+                </div>
+
+                {/* 7. ELEKTRIK */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">7. Elektrik</div>
+                    <div className="pdf-grid">
+                        {renderField("Hauptsicherung", `${data.elecMainFuse} A`)}
+                        {renderField("Platz (HLAK)", renderBool(data.elecSpaceAvailable))}
+                        {renderField("Erdungsschiene", renderBool(data.elecGroundingBar))}
+                        {renderField("EVU Signal", renderBool(data.elecSignalAvailable))}
+                        {renderField("Kabel Außen", `${data.elecCableLength} m`)}
+                        {renderField("Durchführung", data.elecWallBreakthrough)}
+                        {renderField("Internet", renderBool(data.internetAvailable))}
+                        {!data.internetAvailable && renderField("Internet Lösung", data.internetNotes)}
+                    </div>
+                    <div style={{marginTop: 10}}>{renderField("Notizen Elektrik", data.elecNotes)}</div>
+                    {renderPhotoGrid('foto_elektrik', 'Elektrik Fotos')}
+                </div>
+
+                {/* 8. STATUS */}
+                <div className="pdf-section">
+                    <div className="pdf-section-title">8. Status & Logistik</div>
+                    <div className="pdf-grid">
+                        {renderField("Pufferspeicher", data.statusBuffer === 'sold' ? 'Gekauft' : data.statusBuffer === 'upsell' ? 'Interesse' : 'Nein')}
+                        {renderField("Warmwasser", data.statusWater === 'sold' ? 'Gekauft' : data.statusWater === 'upsell' ? 'Interesse' : 'Nein')}
+                        {renderField("PV Integration", data.statusPV === 'sold' ? 'Gekauft' : data.statusPV === 'upsell' ? 'Interesse' : 'Nein')}
+                        {renderField("Ablageort", data.deliveryLocation)}
+                    </div>
+                    {renderPhotoGrid('foto_ablageort', 'Ablageort')}
+                    
+                    <div style={{ marginTop: 20, padding: 15, backgroundColor: '#fffcf0', border: '1px solid #e6dbb9', borderRadius: 4 }}>
+                        <div style={{color: '#b58b00', fontWeight: 700, fontSize: '10pt', textTransform: 'uppercase', marginBottom: 5 }}>Kundenwünsche</div>
+                        <div style={{fontSize: '10pt'}}>{data.customerWishes || "Keine besonderen Wünsche vermerkt."}</div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- MAIN APP ---
+    function App() {
+        const [view, setView] = useState('input');
+        const [data, setData] = useState({
+            firstName: '', lastName: '', email: '', 
+            invoiceRecipientChecked: true, invoiceName: '', invoiceAddress: '', invoiceEmail: '',
+            proxySigned: true, 
+            routingNotes: '', routingPipeLengthInner: '', routingCableLengthInner: '',
+            heatingType: '', consumption: '', houseWarmEnough: true, ovenInUse: false,
+            lastRenovation: '', heatedArea: '', roomHeight: '',
+            insulationWindows: '', insulationWindowsNote: '',
+            insulationFacadeThickness: '', insulationFacadeMaterial: '',
+            insulationRoofThickness: '', insulationRoofMaterial: '',
+            noiseAmplifier: false, noiseNotes: '', alpineHazard: false,
+            wallThickness: '', wallMaterial: '', sealingNeeded: false, 
+            narrowestDoor: '', tippingDimension: '', criticalStairs: false,
+            pipeMaterial: '', pipeDimension: '',
+            elecMainFuse: '', elecSpaceAvailable: true, elecSignalAvailable: false, elecSignalTerminal: '',
+            elecGroundingBar: true, elecCableLength: '', elecWallBreakthrough: 'Bereits vorhanden',
+            elecInstallationType: 'Bestandsschacht', elecNotes: '',
+            internetAvailable: true, internetNotes: '',
+            statusPV: 'none', statusBuffer: 'none', statusWater: 'none',
+            deliveryLocation: '', protocolChecked: false, customerWishes: '' 
+        });
+
+        const [photos, setPhotos] = useState({});
+        const [progress, setProgress] = useState(0);
+
+        const update = (field, val) => setData(prev => ({ ...prev, [field]: val }));
+
+        useEffect(() => {
+            const filledFields = Object.values(data).filter(val => val !== '' && val !== null && val !== false).length;
+            const photoCount = Object.keys(photos).length;
+            const totalFields = 45; 
+            let percent = Math.min(100, Math.round((filledFields + (photoCount * 2)) / totalFields * 100));
+            setProgress(percent);
+        }, [data, photos]);
+
+        const scrollToSection = (id) => {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        const handlePrint = () => {
+            window.print();
+        };
+
+        const handleJsonExport = () => {
+            const blob = new Blob([JSON.stringify({ ...data, photos }, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `VOT_${data.lastName}.json`;
+            link.click();
+        };
+
+        // --- CHECK STATUS HELPER ---
+        const isSectionComplete = (section) => {
+            if(section === 'sec-1') return data.lastName && data.email;
+            if(section === 'sec-2') return data.routingPipeLengthInner || (photos['foto_heizraum'] && photos['foto_heizraum'].length > 0);
+            if(section === 'sec-3') return data.heatingType;
+            if(section === 'sec-7') return data.elecMainFuse;
+            return false;
+        };
+
+        const SidebarLink = ({ id, label }) => {
+            const complete = isSectionComplete(id);
+            return (
+                <button onClick={() => scrollToSection(id)} className="flex items-center justify-between w-full text-left p-3 rounded hover:bg-gray-50 text-gray-600 transition-colors group">
+                    <span className="text-xs font-medium">{label}</span>
+                    <div className={`w-2 h-2 rounded-full ${complete ? 'bg-green-500' : 'bg-red-400 opacity-50 group-hover:opacity-100'}`}></div>
+                </button>
+            )
+        }
+
+        // --- RENDER BASED ON VIEW ---
+        return (
+            <div className={`min-h-screen ${view === 'preview' ? 'preview-mode' : 'edit-mode'}`}>
+                
+                {view === 'preview' ? (
+                    // PREVIEW MODE
+                    <div className="bg-gray-100 min-h-screen pb-20">
+                        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm no-print">
+                            <button onClick={() => setView('input')} className="text-[#0071e3] font-medium flex items-center gap-1 hover:underline">
+                                <Icon path={icons.edit} /> Zurück zur Bearbeitung
+                            </button>
+                            <div className="flex gap-4 items-center">
+                                <div className="text-xs text-gray-500 text-right hidden sm:block">
+                                    Wähle <strong>"Als PDF speichern"</strong><br/>im nächsten Fenster.
+                                </div>
+                                <button 
+                                    onClick={handlePrint} 
+                                    className="px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all bg-[#0071e3] text-white hover:bg-[#005bb5]"
+                                >
+                                    <Icon path={icons.print} /> Drucken / PDF
+                                </button>
+                            </div>
+                        </div>
+                        <div className="py-8">
+                            <PreviewLayout data={data} photos={photos} />
+                        </div>
+                    </div>
+                ) : (
+                    // INPUT MODE
+                    <div className="pb-32">
+                        <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-[#d2d2d7] no-print">
+                            <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+                                <div className="font-semibold text-lg">Mission Solar <span className="text-gray-400 text-sm">| VOT</span></div>
+                                <div className="text-xs bg-gray-100 px-2 py-1 rounded">V19 Stable</div>
+                            </div>
+                        </nav>
+
+                        <main className="max-w-5xl mx-auto pt-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            
+                            {/* SIDEBAR */}
+                            <div className="lg:col-span-4 hidden lg:block no-print">
+                                <div className="sticky top-24 space-y-4">
+                                    <div className="bg-white p-5 rounded-2xl border border-[#d2d2d7] shadow-sm">
+                                        <h3 className="text-sm font-semibold uppercase tracking-wide mb-3 flex items-center gap-2">
+                                            <Icon path={icons.chart} size={16} /> Fortschritt
+                                        </h3>
+                                        <div className="relative w-full h-4 bg-gray-200 rounded-full overflow-hidden mb-4">
+                                            <div className="absolute top-0 left-0 h-full bg-[#0071e3] progress-fill" style={{width: `${progress}%`}}></div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <SidebarLink id="sec-1" label="1. Kunde & Admin" />
+                                            <SidebarLink id="sec-2" label="2. Routing Innen" />
+                                            <SidebarLink id="sec-3" label="3. Gebäude" />
+                                            <SidebarLink id="sec-4" label="4. Außenanlage" />
+                                            <SidebarLink id="sec-5" label="5. Wand & Technik" />
+                                            <SidebarLink id="sec-6" label="6. Hydraulik" />
+                                            <SidebarLink id="sec-7" label="7. Elektrik" />
+                                            <SidebarLink id="sec-8" label="8. Status" />
+                                        </div>
+                                    </div>
+                                    <div className="bg-[#fff9e6] p-5 rounded-2xl border border-[#ffeeba] shadow-sm relative">
+                                        <h3 className="font-bold text-[#b58b00] mb-2 text-sm uppercase">Kundenwünsche</h3>
+                                        <textarea className="w-full h-64 bg-transparent resize-none outline-none text-sm" placeholder="Notizen..." value={data.customerWishes} onChange={(e) => update('customerWishes', e.target.value)}></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* FORM */}
+                            <div className="lg:col-span-8 space-y-6">
+                                <div className="lg:hidden p-4 bg-[#fff9e6] rounded-xl border border-[#ffeeba] mb-4"><textarea className="w-full h-24 bg-transparent resize-none text-sm outline-none" placeholder="Kundenwünsche..." value={data.customerWishes} onChange={(e) => update('customerWishes', e.target.value)} /></div>
+
+                                <Section id="sec-1" icon={icons.user} title="1. Kundendaten">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <TextInput label="Vorname" value={data.firstName} onChange={e => update('firstName', e.target.value)} width="half" />
+                                        <TextInput label="Nachname" value={data.lastName} onChange={e => update('lastName', e.target.value)} width="half" />
+                                        <TextInput label="E-Mail" value={data.email} onChange={e => update('email', e.target.value)} />
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t">
+                                        <Toggle label="Rechnungsempfänger identisch?" checked={data.invoiceRecipientChecked} onChange={e => update('invoiceRecipientChecked', e.target.checked)} />
+                                        {!data.invoiceRecipientChecked && (
+                                            <div className="grid grid-cols-2 gap-3 mt-3 bg-gray-50 p-3 rounded-xl">
+                                                <TextInput label="Name/Firma" value={data.invoiceName} onChange={e => update('invoiceName', e.target.value)} />
+                                                <TextInput label="Adresse" value={data.invoiceAddress} onChange={e => update('invoiceAddress', e.target.value)} />
+                                                <TextInput label="E-Mail" value={data.invoiceEmail} onChange={e => update('invoiceEmail', e.target.value)} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-2">
+                                        <Toggle label="Vollmacht unterzeichnet?" checked={data.proxySigned} onChange={e => update('proxySigned', e.target.checked)} />
+                                        {!data.proxySigned && <PhotoManager id="foto_vollmacht" label="Foto Vollmacht" photos={photos} setPhotos={setPhotos} />}
+                                    </div>
+                                </Section>
+
+                                <Section id="sec-2" icon={icons.route} title="2. Routing & Heizraum (Innen)">
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <TextInput label="Geschätzter Rohrweg Innen (m)" value={data.routingPipeLengthInner} onChange={e => update('routingPipeLengthInner', e.target.value)} width="half" />
+                                        <TextInput label="Geschätzter Kabelweg Innen (m)" value={data.routingCableLengthInner} onChange={e => update('routingCableLengthInner', e.target.value)} width="half" />
+                                    </div>
+                                    <textarea className="w-full bg-blue-50 rounded-xl p-3 text-sm h-24 mb-4 resize-none border border-blue-100" placeholder="Planung Innenverrohrung..." value={data.routingNotes} onChange={(e) => update('routingNotes', e.target.value)} />
+                                    <PhotoManager id="foto_heizraum" label="Fotos: Heizraum" photos={photos} setPhotos={setPhotos} />
+                                    <PhotoManager id="foto_routing" label="Fotos: Leitungswege Innen" photos={photos} setPhotos={setPhotos} />
+                                </Section>
+
+                                <Section id="sec-3" icon={icons.thermometer} title="3. Gebäudehülle & Dämmung">
+                                    <div className="grid grid-cols-2 gap-3 mb-6">
+                                        <TextInput label="Heizart Bestand" value={data.heatingType} onChange={e => update('heatingType', e.target.value)} />
+                                        <TextInput label="Verbrauch Ø" value={data.consumption} onChange={e => update('consumption', e.target.value)} />
+                                        <TextInput label="Beheizte Fläche" value={data.heatedArea} onChange={e => update('heatedArea', e.target.value)} width="half" suffix="m²" />
+                                        <TextInput label="Raumhöhe" value={data.roomHeight} onChange={e => update('roomHeight', e.target.value)} width="half" suffix="m" />
+                                    </div>
+                                    
+                                    <div className="space-y-6 border-t pt-4">
+                                        <div>
+                                            <h4 className="font-bold text-sm text-[#0071e3] mb-2 uppercase">Fenster</h4>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <SelectInput label="Verglasung Typ" value={data.insulationWindows} onChange={e => update('insulationWindows', e.target.value)} options={['1-fach Verglasung', '2-fach Isolierglas (<1995)', '2-fach Wärmeschutzglas (neu)', '3-fach Verglasung', 'Sonstige']} />
+                                                {data.insulationWindows === 'Sonstige' && <TextInput label="Bitte spezifizieren" value={data.insulationWindowsNote} onChange={e => update('insulationWindowsNote', e.target.value)} width="half" />}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm text-[#0071e3] mb-2 uppercase">Wand (Fassade)</h4>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <TextInput label="Material" value={data.insulationFacadeMaterial} onChange={e => update('insulationFacadeMaterial', e.target.value)} width="half" />
+                                                <TextInput label="Dicke (cm)" value={data.insulationFacadeThickness} onChange={e => update('insulationFacadeThickness', e.target.value)} width="half" type="number" />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-sm text-[#0071e3] mb-2 uppercase">Dach / Decke</h4>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <TextInput label="Material" value={data.insulationRoofMaterial} onChange={e => update('insulationRoofMaterial', e.target.value)} width="half" />
+                                                <TextInput label="Dicke (cm)" value={data.insulationRoofThickness} onChange={e => update('insulationRoofThickness', e.target.value)} width="half" type="number" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <PhotoManager id="foto_energieausweis" label="Energieausweis" photos={photos} setPhotos={setPhotos} />
+                                    <PhotoManager id="foto_heizung_allgemein" label="Sonstige Fotos Gebäude" photos={photos} setPhotos={setPhotos} />
+                                </Section>
+
+                                <Section id="sec-4" icon={icons.home} title="4. Außenanlage">
+                                    <div className="bg-red-50 border border-red-100 p-4 rounded-xl space-y-2">
+                                        <Toggle label="Lärmverschärfer (Ecke)?" checked={data.noiseAmplifier} onChange={e => update('noiseAmplifier', e.target.checked)} />
+                                        {data.noiseAmplifier && <TextInput label="Anpassung nötig" value={data.noiseNotes} onChange={e => update('noiseNotes', e.target.value)} />}
+                                        <Toggle label="Alpine Gefahr (Lawine)?" checked={data.alpineHazard} onChange={e => update('alpineHazard', e.target.checked)} />
+                                    </div>
+                                    <PhotoManager id="foto_aussen" label="Standort Außen" photos={photos} setPhotos={setPhotos} />
+                                </Section>
+
+                                <Section id="sec-5" icon={icons.ruler} title="5. Außen-Verbindung & Wand">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <TextInput label="Wandstärke" value={data.wallThickness} onChange={e => update('wallThickness', e.target.value)} width="half" suffix="cm" />
+                                        <TextInput label="Wandmaterial" value={data.wallMaterial} onChange={e => update('wallMaterial', e.target.value)} width="half" />
+                                    </div>
+                                    <div className="mt-3"><Toggle label="Abdichtung nötig (Drückendes Wasser)?" checked={data.sealingNeeded} onChange={e => update('sealingNeeded', e.target.checked)} /></div>
+                                    <PhotoManager id="foto_wand" label="Wanddurchführung Fotos" photos={photos} setPhotos={setPhotos} />
+                                </Section>
+
+                                <Section id="sec-6" icon={icons.layers} title="6. Hydraulik & Engpass">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <TextInput label="Rohrmaterial" value={data.pipeMaterial} onChange={e => update('pipeMaterial', e.target.value)} width="half" />
+                                        <TextInput label="Dimension" value={data.pipeDimension} onChange={e => update('pipeDimension', e.target.value)} width="half" />
+                                        <TextInput label="Engste Tür" value={data.narrowestDoor} onChange={e => update('narrowestDoor', e.target.value)} width="half" suffix="cm" />
+                                        <TextInput label="Kippmaß" value={data.tippingDimension} onChange={e => update('tippingDimension', e.target.value)} width="half" suffix="cm" />
+                                    </div>
+                                    <div className="mt-3"><Toggle label="Treppe Kritisch?" checked={data.criticalStairs} onChange={e => update('criticalStairs', e.target.checked)} /></div>
+                                    <PhotoManager id="foto_hydraulik" label="Hydraulik Fotos" photos={photos} setPhotos={setPhotos} />
+                                </Section>
+
+                                <Section id="sec-7" icon={icons.zap} title="7. Elektrik & Anschluss">
+                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                        <TextInput label="Hauptsicherung (A)" value={data.elecMainFuse} onChange={e => update('elecMainFuse', e.target.value)} width="half" suffix="A" />
+                                        <div className="col-span-2 md:col-span-1 space-y-2">
+                                            <Toggle label="Platz für Abgriff?" checked={data.elecSpaceAvailable} onChange={e => update('elecSpaceAvailable', e.target.checked)} />
+                                            <Toggle label="Haupterdungsschiene frei?" checked={data.elecGroundingBar} onChange={e => update('elecGroundingBar', e.target.checked)} />
+                                        </div>
+                                    </div>
+                                    <div className="bg-[#f5f5f7] p-4 rounded-xl mb-4">
+                                        <Toggle label="EVU-Sperr-Signal (Tinetz)?" checked={data.elecSignalAvailable} onChange={e => update('elecSignalAvailable', e.target.checked)} />
+                                        {data.elecSignalAvailable && <TextInput label="Klemmen-Nr." value={data.elecSignalTerminal} onChange={e => update('elecSignalTerminal', e.target.value)} />}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <TextInput label="Kabelweg Außen (Gesamt)" value={data.elecCableLength} onChange={e => update('elecCableLength', e.target.value)} suffix="m" />
+                                        <SelectInput label="Wanddurchführung" value={data.elecWallBreakthrough} onChange={e => update('elecWallBreakthrough', e.target.value)} options={['Bereits vorhanden', 'Muss gebohrt werden']} width="half" />
+                                        <SelectInput label="Verlegeart" value={data.elecInstallationType} onChange={e => update('elecInstallationType', e.target.value)} options={['Bestandsschacht nutzbar', 'Aufputz (Rohre/Schellen)']} width="half" />
+                                    </div>
+                                    <div className="mt-4 border-t pt-4">
+                                        <Toggle label="Internet verfügbar?" checked={data.internetAvailable} onChange={e => update('internetAvailable', e.target.checked)} />
+                                        {!data.internetAvailable && <TextInput label="Lösung Internet" value={data.internetNotes} onChange={e => update('internetNotes', e.target.value)} />}
+                                    </div>
+                                    <div className="mt-4"><label className="text-xs text-[#86868b]">Anmerkungen Elektrik</label><textarea className="w-full bg-[#f5f5f7] rounded-xl p-3 text-sm h-20 outline-none" value={data.elecNotes} onChange={(e) => update('elecNotes', e.target.value)} /></div>
+                                    <PhotoManager id="foto_elektrik" label="Zählerkasten / Kabelweg" photos={photos} setPhotos={setPhotos} />
+                                </Section>
+
+                                <Section id="sec-8" icon={icons.check} title="8. Projekt & Upsell Check">
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <ProductStatus label="Pufferspeicher" value={data.statusBuffer} onChange={(val) => update('statusBuffer', val)} />
+                                        <ProductStatus label="Warmwasser" value={data.statusWater} onChange={(val) => update('statusWater', val)} />
+                                        <ProductStatus label="PV Integration" value={data.statusPV} onChange={(val) => update('statusPV', val)} />
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t">
+                                        <TextInput label="Ablageort Material" value={data.deliveryLocation} onChange={e => update('deliveryLocation', e.target.value)} />
+                                        <PhotoManager id="foto_ablageort" label="Ablageort" photos={photos} setPhotos={setPhotos} />
+                                    </div>
+                                </Section>
+
+                            </div>
+                        </main>
+
+                        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-[#d2d2d7] p-4 z-50 no-print">
+                            <div className="max-w-5xl mx-auto flex gap-3">
+                                <button onClick={handleJsonExport} className="flex-1 bg-gray-100 py-3 rounded-full font-medium flex justify-center items-center gap-2"><Icon path={icons.json} size={18}/> JSON</button>
+                                <button onClick={() => setView('preview')} className="flex-1 bg-[#0071e3] text-white py-3 rounded-full font-medium shadow-lg hover:shadow-xl hover:bg-[#005bb5] transition-all flex justify-center items-center gap-2">
+                                    <Icon path={icons.check} size={18}/> Fertigstellen
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+
+</body>
+</html>
