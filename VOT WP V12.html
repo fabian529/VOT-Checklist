@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOT Protokoll (V21 Stable)</title>
+    <title>VOT Protokoll (V22 R290 Edition)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -21,7 +21,7 @@
 
         /* --- PRINT STYLES --- */
         @media print {
-            @page { margin: 15mm; size: A4; }
+            @page { margin: 10mm; size: A4; }
             body { background-color: white; -webkit-print-color-adjust: exact; }
             
             /* HIDE UI ELEMENTS */
@@ -44,6 +44,7 @@
             /* Typography Fixes */
             h1, h2, h3, div, span, p { color: #000 !important; }
             .pdf-header { border-bottom-color: #0071e3 !important; }
+            .bg-red-50 { background-color: #fff !important; border: 1px solid #ddd !important; }
         }
 
         /* --- SCREEN PREVIEW --- */
@@ -65,23 +66,23 @@
         .pdf-subtitle { font-size: 10pt; color: #86868b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
         .pdf-meta { text-align: right; font-size: 10pt; color: #1d1d1f; }
         
-        .pdf-section { margin-bottom: 40px; break-inside: avoid; }
-        .pdf-section-title { font-size: 14pt; font-weight: 700; color: #1d1d1f; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; margin-bottom: 20px; }
+        .pdf-section { margin-bottom: 35px; break-inside: avoid; }
+        .pdf-section-title { font-size: 13pt; font-weight: 700; color: #1d1d1f; border-bottom: 1px solid #e5e5e5; padding-bottom: 6px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
         
-        .pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 40px; margin-bottom: 20px; }
+        .pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 30px; margin-bottom: 15px; }
         .pdf-field { margin-bottom: 5px; }
         .pdf-label { font-size: 8pt; color: #86868b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
-        .pdf-value { font-size: 11pt; color: #1d1d1f; font-weight: 500; border-bottom: 1px dotted #e5e5e5; padding-bottom: 2px; }
+        .pdf-value { font-size: 10pt; color: #1d1d1f; font-weight: 500; border-bottom: 1px dotted #e5e5e5; padding-bottom: 2px; min-height: 18px; }
 
         /* --- BIG PHOTOS --- */
-        .pdf-photos { margin-top: 25px; width: 100%; }
-        .pdf-photo-title { font-size: 10pt; font-weight: 700; color: #1d1d1f; margin-bottom: 10px; border-left: 4px solid #0071e3; padding-left: 10px; text-transform: uppercase; }
+        .pdf-photos { margin-top: 20px; width: 100%; }
+        .pdf-photo-title { font-size: 9pt; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; border-left: 3px solid #0071e3; padding-left: 8px; text-transform: uppercase; }
         
-        /* 1 COLUMN FOR MAX SIZE */
+        /* 2 COLUMNS FOR PHOTOS IN PDF TO SAVE SPACE */
         .pdf-photo-list { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 20px; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
             width: 100%;
         }
         
@@ -90,16 +91,15 @@
             page-break-inside: avoid;
             background: #fff;
             border: 1px solid #e5e5e5;
-            padding: 5px;
+            padding: 4px;
             border-radius: 4px;
             width: 100%;
         }
         
         .pdf-img { 
             width: 100%; 
-            height: auto; 
-            max-height: 900px; /* Max height to fit a page */
-            object-fit: contain; 
+            height: 200px; 
+            object-fit: cover; 
             display: block;
         }
     </style>
@@ -119,7 +119,6 @@
     const icons = {
         user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>',
         home: '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline>',
-        camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle>',
         trash: '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>',
         plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
         print: '<polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect>',
@@ -128,11 +127,12 @@
         zap: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>',
         thermometer: '<path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path>',
         ruler: '<path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z"></path>',
-        wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>',
         layers: '<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline>',
         route: '<path d="M9 18l6-6-6-6"></path>',
         chart: '<line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>',
-        json: '<polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>'
+        json: '<polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>',
+        flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>',
+        alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>'
     };
 
     // --- PHOTO MANAGER ---
@@ -196,8 +196,8 @@
         </div>
     );
 
-    const SelectInput = ({ label, value, onChange, options }) => (
-        <div className="bg-[#f5f5f7] rounded-xl px-4 py-2 border border-transparent focus-within:bg-white focus-within:border-[#0071e3] col-span-2 md:col-span-1">
+    const SelectInput = ({ label, value, onChange, options, width = "half" }) => (
+        <div className={`bg-[#f5f5f7] rounded-xl px-4 py-2 border border-transparent focus-within:bg-white focus-within:border-[#0071e3] ${width === 'half' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
             <label className="block text-xs text-[#86868b] mb-1">{label}</label>
             <select value={value} onChange={onChange} className="w-full bg-transparent outline-none text-[#1d1d1f] cursor-pointer appearance-none">
                 <option value="">Bitte wählen...</option>
@@ -206,12 +206,12 @@
         </div>
     );
 
-    const Toggle = ({ label, checked, onChange }) => (
-        <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-            <span className="text-sm text-[#1d1d1f]">{label}</span>
+    const Toggle = ({ label, checked, onChange, alert = false }) => (
+        <div className={`flex items-center justify-between py-2 border-b ${alert ? 'border-red-100' : 'border-gray-100'} last:border-0`}>
+            <span className={`text-sm ${alert ? 'text-red-600 font-medium' : 'text-[#1d1d1f]'}`}>{label}</span>
             <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={checked} onChange={onChange} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#34c759]"></div>
+                <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${alert ? 'peer-checked:bg-red-500' : 'peer-checked:bg-[#34c759]'}`}></div>
             </label>
         </div>
     );
@@ -242,7 +242,6 @@
         );
         const renderBool = (v) => v ? "Ja" : "Nein";
         
-        // BIG PHOTO RENDERER (1 COLUMN)
         const renderPhotoGrid = (id, title) => {
             const pics = photos[id] || [];
             if(pics.length === 0) return null;
@@ -265,7 +264,7 @@
                 <div className="pdf-header">
                     <div>
                         <div className="pdf-title">VOT Protokoll</div>
-                        <div className="pdf-subtitle">Mission Solar | Technische Aufnahme</div>
+                        <div className="pdf-subtitle">Mission Solar | WP Monoblock (Tirol)</div>
                     </div>
                     <div className="pdf-meta">
                         <div style={{fontWeight: 700}}>{data.lastName} {data.firstName}</div>
@@ -274,7 +273,7 @@
                 </div>
 
                 <div className="pdf-section">
-                    <div className="pdf-section-title">1. Kundendaten</div>
+                    <div className="pdf-section-title"><Icon path={icons.user} size={14}/>1. Kundendaten</div>
                     <div className="pdf-grid">
                         {renderField("Name", `${data.firstName} ${data.lastName}`)}
                         {renderField("Email", data.email)}
@@ -286,96 +285,86 @@
                 </div>
 
                 <div className="pdf-section">
-                    <div className="pdf-section-title">2. Routing & Heizraum</div>
+                    <div className="pdf-section-title"><Icon path={icons.flame} size={14}/>2. Bestandsheizung & Demontage</div>
+                    <div className="pdf-grid">
+                        {renderField("Heizart Bestand", data.heatingType)}
+                        {renderField("Baujahr / Alter", data.heatingYear)}
+                        {renderField("Fabrikat/Modell", data.heatingModel)}
+                        {renderField("Tank (Öl)", data.oilTankDisposal)}
+                    </div>
+                    <div style={{marginTop:10}}>
+                        {renderField("Notizen Demontage", data.demolitionNotes)}
+                    </div>
+                    {renderPhotoGrid('foto_bestand_heizung', 'Bestandsheizung & Typenschild')}
+                    {renderPhotoGrid('foto_oeltank', 'Tanksituation (falls Öl)')}
+                </div>
+
+                <div className="pdf-section">
+                    <div className="pdf-section-title"><Icon path={icons.layers} size={14}/>3. Gebäude & Wärmeverteilung</div>
+                    <div className="pdf-grid">
+                        {renderField("Verteilung", data.heatDistribution)}
+                        {renderField("Heizkreise", `${data.heatingCircuits} Stück`)}
+                        {renderField("Radiatoren Typ", data.radiatorType)}
+                        {renderField("Warmwasser Art", data.hotWaterType)}
+                        {renderField("Verbrauch", data.consumption)}
+                        {renderField("Beheizte Fläche", `${data.heatedArea} m²`)}
+                    </div>
+                    <div className="pdf-grid" style={{marginTop: 15}}>
+                        {renderField("Dämmung Fenster", data.insulationWindows)}
+                        {renderField("Dämmung Fassade", data.insulationFacadeMaterial)}
+                        {renderField("Dämmung Dach", data.insulationRoofMaterial)}
+                    </div>
+                    {renderPhotoGrid('foto_verteiler', 'Heizkreisverteiler / Pumpengruppen')}
+                    {renderPhotoGrid('foto_radiatoren', 'Beispiel Heizkörper / FBH')}
+                </div>
+
+                <div className="pdf-section">
+                    <div className="pdf-section-title"><Icon path={icons.alert} size={14}/>4. Außenanlage & R290 Sicherheit</div>
+                    <div className="pdf-grid">
+                        {renderField("R290 Schutzbereich OK?", data.r290Safe ? "Ja" : "NEIN - Maßnahmen nötig")}
+                        {renderField("Zündquellen/Schächte", data.r290Notes)}
+                        {renderField("Kondensat-Lösung", data.condensateDrain)}
+                        {renderField("Alpine Gefahr", renderBool(data.alpineHazard))}
+                        {renderField("Fundament", data.foundationType)}
+                        {renderField("Wanddurchführung", data.wallMaterial + " (" + data.wallThickness + "cm)")}
+                    </div>
+                    {renderPhotoGrid('foto_aussen', 'Aufstellort & R290 Umgebung')}
+                    {renderPhotoGrid('foto_wand', 'Wanddurchführung Außen/Innen')}
+                </div>
+
+                <div className="pdf-section">
+                    <div className="pdf-section-title"><Icon path={icons.route} size={14}/>5. Routing & Technikraum</div>
                     <div className="pdf-grid">
                         {renderField("Rohrweg Innen", `${data.routingPipeLengthInner} m`)}
                         {renderField("Kabelweg Innen", `${data.routingCableLengthInner} m`)}
+                        {renderField("Notizen Routing", data.routingNotes)}
                     </div>
-                    <div style={{ marginTop: 10 }}>
-                        {renderField("Notizen", data.routingNotes)}
-                    </div>
-                    {renderPhotoGrid('foto_heizraum', 'Heizraum & Platzierung')}
+                    {renderPhotoGrid('foto_heizraum', 'Platzierung Inneneinheit / Puffer')}
                     {renderPhotoGrid('foto_routing', 'Leitungswege')}
                 </div>
 
                 <div className="pdf-section">
-                    <div className="pdf-section-title">3. Gebäudehülle</div>
-                    <div className="pdf-grid">
-                        {renderField("Heizung Bestand", data.heatingType)}
-                        {renderField("Verbrauch", data.consumption)}
-                        {renderField("Beheizte Fläche", `${data.heatedArea} m²`)}
-                        {renderField("Warm genug?", renderBool(data.houseWarmEnough))}
-                    </div>
-                    <div style={{ marginTop: 15, marginBottom: 10, fontWeight: 700, fontSize: '10pt' }}>Details Dämmung</div>
-                    <div className="pdf-grid">
-                        {renderField("Fenster", data.insulationWindows === 'Sonstige' ? data.insulationWindowsNote : data.insulationWindows)}
-                        {renderField("Wand", `${data.insulationFacadeMaterial} (${data.insulationFacadeThickness} cm)`)}
-                        {renderField("Dach", `${data.insulationRoofMaterial} (${data.insulationRoofThickness} cm)`)}
-                    </div>
-                    {renderPhotoGrid('foto_energieausweis', 'Energieausweis')}
-                    {renderPhotoGrid('foto_heizung_allgemein', 'Gebäude')}
-                </div>
-
-                <div className="pdf-section">
-                    <div className="pdf-section-title">4. Außenanlage</div>
-                    <div className="pdf-grid">
-                        {renderField("Lärm (Ecke)", renderBool(data.noiseAmplifier))}
-                        {data.noiseAmplifier && renderField("Anpassung nötig", data.noiseNotes)}
-                        {renderField("Alpine Gefahr", renderBool(data.alpineHazard))}
-                    </div>
-                    {renderPhotoGrid('foto_aussen', 'Standort Außen')}
-                </div>
-
-                <div className="pdf-section">
-                    <div className="pdf-section-title">5. Wanddurchführung</div>
-                    <div className="pdf-grid">
-                        {renderField("Wandstärke", `${data.wallThickness} cm`)}
-                        {renderField("Material", data.wallMaterial)}
-                        {renderField("Abdichtung", renderBool(data.sealingNeeded))}
-                    </div>
-                    {renderPhotoGrid('foto_wand', 'Wanddurchführung')}
-                </div>
-
-                <div className="pdf-section">
-                    <div className="pdf-section-title">6. Hydraulik</div>
-                    <div className="pdf-grid">
-                        {renderField("Rohre", data.pipeMaterial)}
-                        {renderField("Dimension", data.pipeDimension)}
-                        {renderField("Engste Tür", `${data.narrowestDoor} cm`)}
-                        {renderField("Treppe OK?", data.criticalStairs ? "Kritisch" : "OK")}
-                    </div>
-                    {renderPhotoGrid('foto_hydraulik', 'Hydraulik Bestand')}
-                </div>
-
-                <div className="pdf-section">
-                    <div className="pdf-section-title">7. Elektrik</div>
+                    <div className="pdf-section-title"><Icon path={icons.zap} size={14}/>6. Elektrik</div>
                     <div className="pdf-grid">
                         {renderField("Hauptsicherung", `${data.elecMainFuse} A`)}
                         {renderField("Platz (HLAK)", renderBool(data.elecSpaceAvailable))}
-                        {renderField("Erdungsschiene", renderBool(data.elecGroundingBar))}
-                        {renderField("EVU Signal", renderBool(data.elecSignalAvailable))}
-                        {renderField("Kabel Außen", `${data.elecCableLength} m`)}
-                        {renderField("Durchführung", data.elecWallBreakthrough)}
-                        {renderField("Internet", renderBool(data.internetAvailable))}
-                        {!data.internetAvailable && renderField("Internet Lösung", data.internetNotes)}
+                        {renderField("EVU Signal (Tirol)", renderBool(data.elecSignalAvailable))}
+                        {renderField("Kabelweg Außen", `${data.elecCableLength} m`)}
                     </div>
                     <div style={{marginTop: 10}}>{renderField("Notizen Elektrik", data.elecNotes)}</div>
-                    {renderPhotoGrid('foto_elektrik', 'Elektrik Fotos')}
+                    {renderPhotoGrid('foto_elektrik', 'Zählerkasten offen/geschlossen')}
                 </div>
 
                 <div className="pdf-section">
-                    <div className="pdf-section-title">8. Status & Logistik</div>
+                    <div className="pdf-section-title"><Icon path={icons.check} size={14}/>7. Status & Wünsche</div>
                     <div className="pdf-grid">
-                        {renderField("Pufferspeicher", data.statusBuffer === 'sold' ? 'Gekauft' : data.statusBuffer === 'upsell' ? 'Interesse' : 'Nein')}
-                        {renderField("Warmwasser", data.statusWater === 'sold' ? 'Gekauft' : data.statusWater === 'upsell' ? 'Interesse' : 'Nein')}
-                        {renderField("PV Integration", data.statusPV === 'sold' ? 'Gekauft' : data.statusPV === 'upsell' ? 'Interesse' : 'Nein')}
+                        {renderField("Puffer", data.statusBuffer)}
+                        {renderField("WW", data.statusWater)}
                         {renderField("Ablageort", data.deliveryLocation)}
                     </div>
-                    {renderPhotoGrid('foto_ablageort', 'Ablageort')}
-                    
-                    <div style={{ marginTop: 20, padding: 15, backgroundColor: '#fffcf0', border: '1px solid #e6dbb9', borderRadius: 4 }}>
-                        <div style={{color: '#b58b00', fontWeight: 700, fontSize: '10pt', textTransform: 'uppercase', marginBottom: 5 }}>Kundenwünsche</div>
-                        <div style={{fontSize: '10pt'}}>{data.customerWishes || "Keine besonderen Wünsche vermerkt."}</div>
+                    <div style={{ marginTop: 15, padding: 10, backgroundColor: '#fffcf0', border: '1px solid #e6dbb9' }}>
+                        <div style={{fontSize: '8pt', fontWeight: 700}}>KUNDENWÜNSCHE:</div>
+                        <div style={{fontSize: '10pt'}}>{data.customerWishes || "-"}</div>
                     </div>
                 </div>
             </div>
@@ -389,22 +378,36 @@
             firstName: '', lastName: '', email: '', 
             invoiceRecipientChecked: true, invoiceName: '', invoiceAddress: '', invoiceEmail: '',
             proxySigned: true, 
-            routingNotes: '', routingPipeLengthInner: '', routingCableLengthInner: '',
-            heatingType: '', consumption: '', houseWarmEnough: true, ovenInUse: false,
-            lastRenovation: '', heatedArea: '', roomHeight: '',
-            insulationWindows: '', insulationWindowsNote: '',
-            insulationFacadeThickness: '', insulationFacadeMaterial: '',
+            
+            // Bestandsheizung Details (NEW)
+            heatingType: '', heatingYear: '', heatingModel: '', 
+            oilTankDisposal: 'Kein Tank', demolitionNotes: '',
+
+            // Gebäudehülle & Verteilung (NEW)
+            heatDistribution: '', heatingCircuits: '1', radiatorType: '', hotWaterType: '',
+            consumption: '', houseWarmEnough: true, heatedArea: '', roomHeight: '',
+            insulationWindows: '', insulationFacadeThickness: '', insulationFacadeMaterial: '',
             insulationRoofThickness: '', insulationRoofMaterial: '',
-            noiseAmplifier: false, noiseNotes: '', alpineHazard: false,
+
+            // Außen & R290 (NEW)
+            r290Safe: true, r290Notes: '', condensateDrain: 'Versickerung (Kiesbett)',
+            foundationType: 'Streifenfundament bauseits',
+            noiseAmplifier: false, alpineHazard: false,
+            
+            // Wand & Routing
             wallThickness: '', wallMaterial: '', sealingNeeded: false, 
-            narrowestDoor: '', tippingDimension: '', criticalStairs: false,
-            pipeMaterial: '', pipeDimension: '',
-            elecMainFuse: '', elecSpaceAvailable: true, elecSignalAvailable: false, elecSignalTerminal: '',
+            routingNotes: '', routingPipeLengthInner: '', routingCableLengthInner: '',
+            narrowestDoor: '', pipeMaterial: '', pipeDimension: '', criticalStairs: false,
+
+            // Elektrik
+            elecMainFuse: '', elecSpaceAvailable: true, elecSignalAvailable: false, 
             elecGroundingBar: true, elecCableLength: '', elecWallBreakthrough: 'Bereits vorhanden',
             elecInstallationType: 'Bestandsschacht', elecNotes: '',
             internetAvailable: true, internetNotes: '',
+
+            // Status
             statusPV: 'none', statusBuffer: 'none', statusWater: 'none',
-            deliveryLocation: '', protocolChecked: false, customerWishes: '' 
+            deliveryLocation: '', customerWishes: '' 
         });
 
         const [photos, setPhotos] = useState({});
@@ -415,7 +418,7 @@
         useEffect(() => {
             const filledFields = Object.values(data).filter(val => val !== '' && val !== null && val !== false).length;
             const photoCount = Object.keys(photos).length;
-            const totalFields = 45; 
+            const totalFields = 55; 
             let percent = Math.min(100, Math.round((filledFields + (photoCount * 2)) / totalFields * 100));
             setProgress(percent);
         }, [data, photos]);
@@ -425,52 +428,39 @@
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
 
-        const handlePrint = () => {
-            window.print();
-        };
+        const handlePrint = () => window.print();
 
         const handleJsonExport = () => {
             const blob = new Blob([JSON.stringify({ ...data, photos }, null, 2)], { type: 'application/json' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `VOT_${data.lastName}.json`;
+            link.download = `VOT_${data.lastName}_R290.json`;
             link.click();
         };
 
-        // --- RENDER BASED ON VIEW ---
         return (
             <div className={`min-h-screen ${view === 'preview' ? 'preview-mode' : 'edit-mode'}`}>
                 
                 {view === 'preview' ? (
-                    // PREVIEW MODE
                     <div className="bg-gray-100 min-h-screen pb-20">
                         <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm no-print">
                             <button onClick={() => setView('input')} className="text-[#0071e3] font-medium flex items-center gap-1 hover:underline">
-                                <Icon path={icons.edit} /> Zurück zur Bearbeitung
+                                <Icon path={icons.edit} /> Zurück
                             </button>
-                            <div className="flex gap-4 items-center">
-                                <div className="text-xs text-gray-500 text-right hidden sm:block">
-                                    Wähle <strong>"Als PDF speichern"</strong><br/>im nächsten Fenster.
-                                </div>
-                                <button 
-                                    onClick={handlePrint} 
-                                    className="px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all bg-[#0071e3] text-white hover:bg-[#005bb5]"
-                                >
-                                    <Icon path={icons.print} /> Drucken / PDF
-                                </button>
-                            </div>
+                            <button onClick={handlePrint} className="px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all bg-[#0071e3] text-white hover:bg-[#005bb5]">
+                                <Icon path={icons.print} /> PDF Speichern
+                            </button>
                         </div>
                         <div className="py-8">
                             <PreviewLayout data={data} photos={photos} />
                         </div>
                     </div>
                 ) : (
-                    // INPUT MODE
                     <div className="pb-32">
                         <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-[#d2d2d7] no-print">
                             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-                                <div className="font-semibold text-lg">Mission Solar <span className="text-gray-400 text-sm">| VOT</span></div>
-                                <div className="text-xs bg-gray-100 px-2 py-1 rounded">V20 Final</div>
+                                <div className="font-semibold text-lg">Mission Solar <span className="text-gray-400 text-sm">| Monoblock VOT</span></div>
+                                <div className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded font-bold">R290 Ready</div>
                             </div>
                         </nav>
 
@@ -487,23 +477,21 @@
                                             <div className="absolute top-0 left-0 h-full bg-[#0071e3] progress-fill" style={{width: `${progress}%`}}></div>
                                         </div>
                                         <div className="space-y-1">
-                                            {/* Quick Links */}
-                                            {['1. Kunde', '2. Routing', '3. Gebäude', '4. Außen', '5. Wand', '6. Hydraulik', '7. Elektrik', '8. Status'].map((l, i) => (
+                                            {['1. Kunde', '2. Bestand', '3. Gebäude', '4. Außen/R290', '5. Routing', '6. Elektrik', '7. Status'].map((l, i) => (
                                                 <button key={i} onClick={() => scrollToSection(`sec-${i+1}`)} className="block w-full text-left p-2 rounded hover:bg-gray-50 text-gray-600 text-xs">{l}</button>
                                             ))}
                                         </div>
                                     </div>
                                     <div className="bg-[#fff9e6] p-5 rounded-2xl border border-[#ffeeba] shadow-sm relative">
-                                        <h3 className="font-bold text-[#b58b00] mb-2 text-sm uppercase">Kundenwünsche</h3>
-                                        <textarea className="w-full h-64 bg-transparent resize-none outline-none text-sm" placeholder="Notizen..." value={data.customerWishes} onChange={(e) => update('customerWishes', e.target.value)}></textarea>
+                                        <h3 className="font-bold text-[#b58b00] mb-2 text-sm uppercase">Notizen</h3>
+                                        <textarea className="w-full h-32 bg-transparent resize-none outline-none text-sm" placeholder="Wichtiges..." value={data.customerWishes} onChange={(e) => update('customerWishes', e.target.value)}></textarea>
                                     </div>
                                 </div>
                             </div>
 
                             {/* FORM */}
                             <div className="lg:col-span-8 space-y-6">
-                                <div className="lg:hidden p-4 bg-[#fff9e6] rounded-xl border border-[#ffeeba] mb-4"><textarea className="w-full h-24 bg-transparent resize-none text-sm outline-none" placeholder="Kundenwünsche..." value={data.customerWishes} onChange={(e) => update('customerWishes', e.target.value)} /></div>
-
+                                
                                 <Section id="sec-1" icon={icons.user} title="1. Kundendaten">
                                     <div className="grid grid-cols-2 gap-3">
                                         <TextInput label="Vorname" value={data.firstName} onChange={e => update('firstName', e.target.value)} width="half" />
@@ -516,7 +504,6 @@
                                             <div className="grid grid-cols-2 gap-3 mt-3 bg-gray-50 p-3 rounded-xl">
                                                 <TextInput label="Name/Firma" value={data.invoiceName} onChange={e => update('invoiceName', e.target.value)} />
                                                 <TextInput label="Adresse" value={data.invoiceAddress} onChange={e => update('invoiceAddress', e.target.value)} />
-                                                <TextInput label="E-Mail" value={data.invoiceEmail} onChange={e => update('invoiceEmail', e.target.value)} />
                                             </div>
                                         )}
                                     </div>
@@ -526,106 +513,121 @@
                                     </div>
                                 </Section>
 
-                                <Section id="sec-2" icon={icons.route} title="2. Routing & Heizraum (Innen)">
+                                <Section id="sec-2" icon={icons.flame} title="2. Bestandsheizung & Demontage">
                                     <div className="grid grid-cols-2 gap-3 mb-4">
-                                        <TextInput label="Geschätzter Rohrweg Innen (m)" value={data.routingPipeLengthInner} onChange={e => update('routingPipeLengthInner', e.target.value)} width="half" />
-                                        <TextInput label="Geschätzter Kabelweg Innen (m)" value={data.routingCableLengthInner} onChange={e => update('routingCableLengthInner', e.target.value)} width="half" />
+                                        <SelectInput label="Heizungstyp" value={data.heatingType} onChange={e => update('heatingType', e.target.value)} options={['Öl', 'Gas', 'Holz/Pellets', 'Strom/Nachtspeicher', 'Wärmepumpe (Alt)']} />
+                                        <TextInput label="Baujahr (ca.)" value={data.heatingYear} onChange={e => update('heatingYear', e.target.value)} width="half" />
+                                        <TextInput label="Hersteller/Modell" value={data.heatingModel} onChange={e => update('heatingModel', e.target.value)} />
                                     </div>
-                                    <textarea className="w-full bg-blue-50 rounded-xl p-3 text-sm h-24 mb-4 resize-none border border-blue-100" placeholder="Planung Innenverrohrung..." value={data.routingNotes} onChange={(e) => update('routingNotes', e.target.value)} />
-                                    <PhotoManager id="foto_heizraum" label="Fotos: Heizraum" photos={photos} setPhotos={setPhotos} />
-                                    <PhotoManager id="foto_routing" label="Fotos: Leitungswege Innen" photos={photos} setPhotos={setPhotos} />
+                                    {data.heatingType === 'Öl' && (
+                                        <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl mb-4">
+                                            <SelectInput label="Öltank Situation" value={data.oilTankDisposal} onChange={e => update('oilTankDisposal', e.target.value)} options={['Muss entsorgt werden (Stahl)', 'Muss entsorgt werden (Kunststoff)', 'Bleibt (Stilllegung)', 'Erdtank (Spezialfirma nötig)']} width="full" />
+                                            <PhotoManager id="foto_oeltank" label="Foto Öltank" photos={photos} setPhotos={setPhotos} />
+                                        </div>
+                                    )}
+                                    <textarea className="w-full bg-[#f5f5f7] rounded-xl p-3 text-sm h-20 outline-none" placeholder="Besonderheiten Demontage (z.B. enge Treppe, Asbest?)..." value={data.demolitionNotes} onChange={(e) => update('demolitionNotes', e.target.value)} />
+                                    <PhotoManager id="foto_bestand_heizung" label="Fotos Bestand (Kessel & Typenschild)" photos={photos} setPhotos={setPhotos} />
                                 </Section>
 
-                                <Section id="sec-3" icon={icons.thermometer} title="3. Gebäudehülle & Dämmung">
+                                <Section id="sec-3" icon={icons.thermometer} title="3. Gebäudehülle & Wärmeverteilung">
+                                    <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl mb-6">
+                                        <h4 className="font-bold text-xs text-blue-600 mb-2 uppercase">Hydraulik-Check (Wichtig!)</h4>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <SelectInput label="Wärmeverteilung" value={data.heatDistribution} onChange={e => update('heatDistribution', e.target.value)} options={['Nur Heizkörper', 'Nur Fußbodenheizung', 'Gemischt (HK + FBH)']} width="full" />
+                                            <SelectInput label="Heizkreise (Pumpengruppen)" value={data.heatingCircuits} onChange={e => update('heatingCircuits', e.target.value)} options={['1 (Direkt)', '2 (Gemischt)', '3 oder mehr']} width="half" />
+                                            <SelectInput label="Warmwasser Bereitung" value={data.hotWaterType} onChange={e => update('hotWaterType', e.target.value)} options={['Über Zentralheizung (Speicher)', 'Brauchwasser-WP', 'Durchlauferhitzer/Boiler (Strom)']} width="full" />
+                                        </div>
+                                        {data.heatDistribution.includes('Heizkörper') && (
+                                            <div className="mt-3">
+                                                <SelectInput label="Radiatoren Typ" value={data.radiatorType} onChange={e => update('radiatorType', e.target.value)} options={['Gussrippen (Alt)', 'Plattenheizkörper (Typ 11/21/22/33)', 'Niedertemperatur/Gebläse']} width="full" />
+                                            </div>
+                                        )}
+                                    </div>
+
                                     <div className="grid grid-cols-2 gap-3 mb-6">
-                                        <TextInput label="Heizart Bestand" value={data.heatingType} onChange={e => update('heatingType', e.target.value)} />
-                                        <TextInput label="Verbrauch Ø" value={data.consumption} onChange={e => update('consumption', e.target.value)} />
-                                        <TextInput label="Beheizte Fläche" value={data.heatedArea} onChange={e => update('heatedArea', e.target.value)} width="half" suffix="m²" />
-                                        <TextInput label="Raumhöhe" value={data.roomHeight} onChange={e => update('roomHeight', e.target.value)} width="half" suffix="m" />
+                                        <TextInput label="Verbrauch Ø (Liter/m³)" value={data.consumption} onChange={e => update('consumption', e.target.value)} width="half" />
+                                        <TextInput label="Beheizte Fläche (m²)" value={data.heatedArea} onChange={e => update('heatedArea', e.target.value)} width="half" />
                                     </div>
                                     
-                                    <div className="space-y-6 border-t pt-4">
-                                        <div>
-                                            <h4 className="font-bold text-sm text-[#0071e3] mb-2 uppercase">Fenster</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <SelectInput label="Verglasung Typ" value={data.insulationWindows} onChange={e => update('insulationWindows', e.target.value)} options={['1-fach Verglasung', '2-fach Isolierglas (<1995)', '2-fach Wärmeschutzglas (neu)', '3-fach Verglasung', 'Sonstige']} />
-                                                {data.insulationWindows === 'Sonstige' && <TextInput label="Bitte spezifizieren" value={data.insulationWindowsNote} onChange={e => update('insulationWindowsNote', e.target.value)} width="half" />}
-                                            </div>
+                                    <div className="space-y-4 border-t pt-4">
+                                        <SelectInput label="Fenster" value={data.insulationWindows} onChange={e => update('insulationWindows', e.target.value)} options={['1-fach', '2-fach (Alt <1995)', '2-fach (Neu)', '3-fach']} />
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <TextInput label="Fassade (Material)" value={data.insulationFacadeMaterial} onChange={e => update('insulationFacadeMaterial', e.target.value)} width="half" />
+                                            <TextInput label="Dicke (cm)" value={data.insulationFacadeThickness} onChange={e => update('insulationFacadeThickness', e.target.value)} width="half" type="number" />
                                         </div>
-                                        <div>
-                                            <h4 className="font-bold text-sm text-[#0071e3] mb-2 uppercase">Wand (Fassade)</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <TextInput label="Material" value={data.insulationFacadeMaterial} onChange={e => update('insulationFacadeMaterial', e.target.value)} width="half" />
-                                                <TextInput label="Dicke (cm)" value={data.insulationFacadeThickness} onChange={e => update('insulationFacadeThickness', e.target.value)} width="half" type="number" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-sm text-[#0071e3] mb-2 uppercase">Dach / Decke</h4>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <TextInput label="Material" value={data.insulationRoofMaterial} onChange={e => update('insulationRoofMaterial', e.target.value)} width="half" />
-                                                <TextInput label="Dicke (cm)" value={data.insulationRoofThickness} onChange={e => update('insulationRoofThickness', e.target.value)} width="half" type="number" />
-                                            </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <TextInput label="Dach (Material)" value={data.insulationRoofMaterial} onChange={e => update('insulationRoofMaterial', e.target.value)} width="half" />
+                                            <TextInput label="Dicke (cm)" value={data.insulationRoofThickness} onChange={e => update('insulationRoofThickness', e.target.value)} width="half" type="number" />
                                         </div>
                                     </div>
-                                    <PhotoManager id="foto_energieausweis" label="Energieausweis" photos={photos} setPhotos={setPhotos} />
-                                    <PhotoManager id="foto_heizung_allgemein" label="Sonstige Fotos Gebäude" photos={photos} setPhotos={setPhotos} />
+                                    <PhotoManager id="foto_verteiler" label="Foto: Verteiler / Pumpen" photos={photos} setPhotos={setPhotos} />
+                                    <PhotoManager id="foto_radiatoren" label="Foto: Heizkörper / FBH" photos={photos} setPhotos={setPhotos} />
                                 </Section>
 
-                                <Section id="sec-4" icon={icons.home} title="4. Außenanlage">
-                                    <div className="bg-red-50 border border-red-100 p-4 rounded-xl space-y-2">
-                                        <Toggle label="Lärmverschärfer (Ecke)?" checked={data.noiseAmplifier} onChange={e => update('noiseAmplifier', e.target.checked)} />
-                                        {data.noiseAmplifier && <TextInput label="Anpassung nötig" value={data.noiseNotes} onChange={e => update('noiseNotes', e.target.value)} />}
+                                <Section id="sec-4" icon={icons.alert} title="4. Außenanlage & R290 Schutzbereich">
+                                    <div className="bg-red-50 border border-red-200 p-4 rounded-xl space-y-4 mb-4">
+                                        <h4 className="font-bold text-xs text-red-600 uppercase flex items-center gap-2"><Icon path={icons.alert} size={12}/> Monoblock Safety Check</h4>
+                                        <Toggle label="Schutzbereich (1m) FREI von Zündquellen/Fenstern?" checked={data.r290Safe} onChange={e => update('r290Safe', e.target.checked)} alert={!data.r290Safe} />
+                                        {!data.r290Safe && <TextInput label="Was ist im Weg? (Lichtschacht, Gulli...)" value={data.r290Notes} onChange={e => update('r290Notes', e.target.value)} />}
+                                        
+                                        <SelectInput label="Kondensat-Ableitung (Winter!)" value={data.condensateDrain} onChange={e => update('condensateDrain', e.target.value)} options={['Versickerung (Kiesbett >80cm tief)', 'Kanalanschluss (Begleitheizung nötig)', 'Dachrinne/Fallrohr']} width="full" />
+                                        <SelectInput label="Fundament" value={data.foundationType} onChange={e => update('foundationType', e.target.value)} options={['Streifenfundament bauseits', 'BigFoots (Kiesbett)', 'Wandkonsole (Nur bei Betonwand!)']} width="full" />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
                                         <Toggle label="Alpine Gefahr (Lawine)?" checked={data.alpineHazard} onChange={e => update('alpineHazard', e.target.checked)} />
+                                        <Toggle label="Lärmproblem (Schallreflexion)?" checked={data.noiseAmplifier} onChange={e => update('noiseAmplifier', e.target.checked)} />
                                     </div>
-                                    <PhotoManager id="foto_aussen" label="Standort Außen" photos={photos} setPhotos={setPhotos} />
+
+                                    <div className="mt-4 pt-4 border-t">
+                                        <label className="text-xs text-[#86868b] uppercase font-bold mb-2 block">Wanddurchführung</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <TextInput label="Wandstärke (cm)" value={data.wallThickness} onChange={e => update('wallThickness', e.target.value)} width="half" />
+                                            <TextInput label="Material" value={data.wallMaterial} onChange={e => update('wallMaterial', e.target.value)} width="half" />
+                                        </div>
+                                        <div className="mt-2"><Toggle label="Abdichtung nötig (Drückendes Wasser)?" checked={data.sealingNeeded} onChange={e => update('sealingNeeded', e.target.checked)} /></div>
+                                    </div>
+
+                                    <PhotoManager id="foto_aussen" label="Standort & Schutzbereich" photos={photos} setPhotos={setPhotos} />
+                                    <PhotoManager id="foto_wand" label="Wanddurchführung" photos={photos} setPhotos={setPhotos} />
                                 </Section>
 
-                                <Section id="sec-5" icon={icons.ruler} title="5. Außen-Verbindung & Wand">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <TextInput label="Wandstärke" value={data.wallThickness} onChange={e => update('wallThickness', e.target.value)} width="half" suffix="cm" />
-                                        <TextInput label="Wandmaterial" value={data.wallMaterial} onChange={e => update('wallMaterial', e.target.value)} width="half" />
+                                <Section id="sec-5" icon={icons.route} title="5. Routing & Technikraum">
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                        <TextInput label="Rohrweg Innen (m)" value={data.routingPipeLengthInner} onChange={e => update('routingPipeLengthInner', e.target.value)} width="half" />
+                                        <TextInput label="Kabelweg Innen (m)" value={data.routingCableLengthInner} onChange={e => update('routingCableLengthInner', e.target.value)} width="half" />
+                                        <TextInput label="Engste Tür/Treppe (cm)" value={data.narrowestDoor} onChange={e => update('narrowestDoor', e.target.value)} width="half" />
+                                        <TextInput label="Rohrleitung Dimension Bestand" value={data.pipeDimension} onChange={e => update('pipeDimension', e.target.value)} width="half" />
                                     </div>
-                                    <div className="mt-3"><Toggle label="Abdichtung nötig (Drückendes Wasser)?" checked={data.sealingNeeded} onChange={e => update('sealingNeeded', e.target.checked)} /></div>
-                                    <PhotoManager id="foto_wand" label="Wanddurchführung Fotos" photos={photos} setPhotos={setPhotos} />
+                                    <textarea className="w-full bg-blue-50 rounded-xl p-3 text-sm h-24 mb-4 resize-none border border-blue-100" placeholder="Beschreibung Leitungsführung..." value={data.routingNotes} onChange={(e) => update('routingNotes', e.target.value)} />
+                                    <PhotoManager id="foto_heizraum" label="Aufstellort Puffer/Inneneinheit" photos={photos} setPhotos={setPhotos} />
+                                    <PhotoManager id="foto_routing" label="Leitungswege" photos={photos} setPhotos={setPhotos} />
                                 </Section>
 
-                                <Section id="sec-6" icon={icons.layers} title="6. Hydraulik & Engpass">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <TextInput label="Rohrmaterial" value={data.pipeMaterial} onChange={e => update('pipeMaterial', e.target.value)} width="half" />
-                                        <TextInput label="Dimension" value={data.pipeDimension} onChange={e => update('pipeDimension', e.target.value)} width="half" />
-                                        <TextInput label="Engste Tür" value={data.narrowestDoor} onChange={e => update('narrowestDoor', e.target.value)} width="half" suffix="cm" />
-                                        <TextInput label="Kippmaß" value={data.tippingDimension} onChange={e => update('tippingDimension', e.target.value)} width="half" suffix="cm" />
-                                    </div>
-                                    <div className="mt-3"><Toggle label="Treppe Kritisch?" checked={data.criticalStairs} onChange={e => update('criticalStairs', e.target.checked)} /></div>
-                                    <PhotoManager id="foto_hydraulik" label="Hydraulik Fotos" photos={photos} setPhotos={setPhotos} />
-                                </Section>
-
-                                <Section id="sec-7" icon={icons.zap} title="7. Elektrik & Anschluss">
+                                <Section id="sec-6" icon={icons.zap} title="6. Elektrik & Anschluss">
                                     <div className="grid grid-cols-2 gap-4 mb-4">
                                         <TextInput label="Hauptsicherung (A)" value={data.elecMainFuse} onChange={e => update('elecMainFuse', e.target.value)} width="half" suffix="A" />
                                         <div className="col-span-2 md:col-span-1 space-y-2">
-                                            <Toggle label="Platz für Abgriff?" checked={data.elecSpaceAvailable} onChange={e => update('elecSpaceAvailable', e.target.checked)} />
-                                            <Toggle label="Haupterdungsschiene frei?" checked={data.elecGroundingBar} onChange={e => update('elecGroundingBar', e.target.checked)} />
+                                            <Toggle label="Platz im Verteiler?" checked={data.elecSpaceAvailable} onChange={e => update('elecSpaceAvailable', e.target.checked)} />
+                                            <Toggle label="Erdungsschiene frei?" checked={data.elecGroundingBar} onChange={e => update('elecGroundingBar', e.target.checked)} />
                                         </div>
                                     </div>
                                     <div className="bg-[#f5f5f7] p-4 rounded-xl mb-4">
-                                        <Toggle label="EVU-Sperr-Signal (Tinetz)?" checked={data.elecSignalAvailable} onChange={e => update('elecSignalAvailable', e.target.checked)} />
-                                        {data.elecSignalAvailable && <TextInput label="Klemmen-Nr." value={data.elecSignalTerminal} onChange={e => update('elecSignalTerminal', e.target.value)} />}
+                                        <Toggle label="EVU-Sperr-Signal (Tirol/Tinetz)?" checked={data.elecSignalAvailable} onChange={e => update('elecSignalAvailable', e.target.checked)} />
+                                        <div className="text-[10px] text-gray-500 mt-1">Hinweis: Bei Sperrzeiten muss der Puffer größer dimensioniert werden.</div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3 mb-4">
-                                        <TextInput label="Kabelweg Außen (Gesamt)" value={data.elecCableLength} onChange={e => update('elecCableLength', e.target.value)} suffix="m" />
-                                        <SelectInput label="Wanddurchführung" value={data.elecWallBreakthrough} onChange={e => update('elecWallBreakthrough', e.target.value)} options={['Bereits vorhanden', 'Muss gebohrt werden']} width="half" />
-                                        <SelectInput label="Verlegeart" value={data.elecInstallationType} onChange={e => update('elecInstallationType', e.target.value)} options={['Bestandsschacht nutzbar', 'Aufputz (Rohre/Schellen)']} width="half" />
+                                        <TextInput label="Kabelweg Außen (m)" value={data.elecCableLength} onChange={e => update('elecCableLength', e.target.value)} />
+                                        <SelectInput label="Verlegeart Außen" value={data.elecInstallationType} onChange={e => update('elecInstallationType', e.target.value)} options={['Bestandsschacht', 'Aufputz Rohr', 'Erdverlegung']} width="half" />
                                     </div>
                                     <div className="mt-4 border-t pt-4">
-                                        <Toggle label="Internet verfügbar?" checked={data.internetAvailable} onChange={e => update('internetAvailable', e.target.checked)} />
-                                        {!data.internetAvailable && <TextInput label="Lösung Internet" value={data.internetNotes} onChange={e => update('internetNotes', e.target.value)} />}
+                                        <Toggle label="Internet (LAN) verfügbar?" checked={data.internetAvailable} onChange={e => update('internetAvailable', e.target.checked)} />
+                                        {!data.internetAvailable && <TextInput label="Alternative (Powerline/WLAN)" value={data.internetNotes} onChange={e => update('internetNotes', e.target.value)} />}
                                     </div>
-                                    <div className="mt-4"><label className="text-xs text-[#86868b]">Anmerkungen Elektrik</label><textarea className="w-full bg-[#f5f5f7] rounded-xl p-3 text-sm h-20 outline-none" value={data.elecNotes} onChange={(e) => update('elecNotes', e.target.value)} /></div>
-                                    <PhotoManager id="foto_elektrik" label="Zählerkasten / Kabelweg" photos={photos} setPhotos={setPhotos} />
+                                    <PhotoManager id="foto_elektrik" label="Zählerkasten & Hauptsicherung" photos={photos} setPhotos={setPhotos} />
                                 </Section>
 
-                                <Section id="sec-8" icon={icons.check} title="8. Projekt & Upsell Check">
+                                <Section id="sec-7" icon={icons.check} title="7. Status & Komponenten">
                                     <div className="grid grid-cols-2 gap-3 mb-4">
                                         <ProductStatus label="Pufferspeicher" value={data.statusBuffer} onChange={(val) => update('statusBuffer', val)} />
                                         <ProductStatus label="Warmwasser" value={data.statusWater} onChange={(val) => update('statusWater', val)} />
@@ -633,7 +635,6 @@
                                     </div>
                                     <div className="mt-4 pt-4 border-t">
                                         <TextInput label="Ablageort Material" value={data.deliveryLocation} onChange={e => update('deliveryLocation', e.target.value)} />
-                                        <PhotoManager id="foto_ablageort" label="Ablageort" photos={photos} setPhotos={setPhotos} />
                                     </div>
                                 </Section>
 
