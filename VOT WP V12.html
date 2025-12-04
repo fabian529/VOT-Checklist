@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VOT Protokoll (V22 R290 Edition)</title>
+    <title>VOT Protokoll (V23 Large Photos)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -21,7 +21,7 @@
 
         /* --- PRINT STYLES --- */
         @media print {
-            @page { margin: 10mm; size: A4; }
+            @page { margin: 15mm; size: A4; }
             body { background-color: white; -webkit-print-color-adjust: exact; }
             
             /* HIDE UI ELEMENTS */
@@ -74,15 +74,15 @@
         .pdf-label { font-size: 8pt; color: #86868b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
         .pdf-value { font-size: 10pt; color: #1d1d1f; font-weight: 500; border-bottom: 1px dotted #e5e5e5; padding-bottom: 2px; min-height: 18px; }
 
-        /* --- BIG PHOTOS --- */
-        .pdf-photos { margin-top: 20px; width: 100%; }
-        .pdf-photo-title { font-size: 9pt; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; border-left: 3px solid #0071e3; padding-left: 8px; text-transform: uppercase; }
+        /* --- BIG PHOTOS SETTINGS --- */
+        .pdf-photos { margin-top: 25px; width: 100%; break-inside: avoid; }
+        .pdf-photo-title { font-size: 10pt; font-weight: 700; color: #1d1d1f; margin-bottom: 10px; border-left: 4px solid #0071e3; padding-left: 10px; text-transform: uppercase; }
         
-        /* 2 COLUMNS FOR PHOTOS IN PDF TO SAVE SPACE */
+        /* 1 COLUMN FOR MAX SIZE */
         .pdf-photo-list { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
             width: 100%;
         }
         
@@ -91,15 +91,16 @@
             page-break-inside: avoid;
             background: #fff;
             border: 1px solid #e5e5e5;
-            padding: 4px;
+            padding: 5px;
             border-radius: 4px;
             width: 100%;
         }
         
         .pdf-img { 
             width: 100%; 
-            height: 200px; 
-            object-fit: cover; 
+            height: auto; 
+            max-height: 700px; /* Prevents extremely tall images from breaking flow too much */
+            object-fit: contain; 
             display: block;
         }
     </style>
