@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VOT Protokoll (V30 Page Breaks)</title>
+    <title>VOT Protokoll (V31 iPad Optimized)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -13,16 +13,34 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f5f5f7; color: #1d1d1f; }
+        /* BASE STYLES */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f5f5f7; 
+            color: #1d1d1f; 
+            -webkit-text-size-adjust: 100%; /* Prevents font scaling in landscape */
+        }
         
+        /* IPAD INPUT FIX: Prevents auto-zoom on focus by enforcing 16px font size */
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+
         .input-group:focus-within label { transform: translateY(-22px) scale(0.85); color: #0071e3; }
         .input-filled label { transform: translateY(-22px) scale(0.85); }
         .progress-fill { transition: width 0.5s ease-out; }
 
-        /* --- PRINT STYLES (OPTIMIZED V30) --- */
+        /* --- PRINT STYLES (iPad & Cut-off Fixes) --- */
         @media print {
-            @page { margin: 15mm; size: A4; }
-            body { background-color: white; -webkit-print-color-adjust: exact; }
+            @page { margin: 10mm; size: A4; }
+            
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background-color: white !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
             
             /* HIDE UI ELEMENTS */
             .no-print, nav, aside, button, .sidebar, .bottom-bar { display: none !important; }
@@ -35,64 +53,82 @@
                 padding: 0;
             }
 
-            /* --- PAGE BREAK LOGIC --- */
+            /* --- CRITICAL PAGE BREAK LOGIC --- */
             
-            /* Basis-Einstellung für Sektionen */
+            /* Sektionen */
             .pdf-section { 
                 display: block !important; 
-                page-break-inside: auto !important; /* Erlaubt Umbruch INHALB einer Sektion (für lange Listen) */
+                page-break-inside: auto !important;
                 break-inside: auto !important;
-                margin-bottom: 0; 
+                margin-bottom: 20px; 
             }
 
-            /* WICHTIG: Erzwinge Seitenumbruch vor jeder Sektion, AUSSER der ersten */
-            /* Die erste Sektion bleibt unter dem Header auf Seite 1 */
+            /* Neue Seite vor jeder Sektion (außer der ersten) */
             .pdf-section:not(:first-of-type) {
                 page-break-before: always !important;
                 break-before: page !important;
-                margin-top: 0;
             }
             
-            /* Header bleibt oben */
+            /* Header */
             .pdf-header {
-                margin-bottom: 30px;
+                margin-bottom: 20px;
+                break-inside: avoid;
             }
 
-            /* Titles: Keep with content */
+            /* Titles */
             .pdf-section-title { 
                 page-break-after: avoid; 
                 break-after: avoid; 
-                margin-top: 20px; /* Ein bisschen Luft oben auf der neuen Seite */
+                margin-top: 20px;
             }
             
-            /* IMAGES: DO NOT CUT */
+            /* --- IMAGE NO-CUT LOGIC --- */
+            
+            .pdf-photos {
+                display: block;
+                width: 100%;
+            }
+
+            /* The Container for a SINGLE photo */
             .pdf-img-container { 
-                page-break-inside: avoid !important; 
-                break-inside: avoid !important; 
                 display: block !important;
-                margin-top: 15px; 
-                margin-bottom: 25px;
                 position: relative;
+                
+                /* This is the magic combination for iOS/Safari */
+                page-break-inside: avoid !important; 
+                break-inside: avoid !important;
+                -webkit-column-break-inside: avoid;
+                
+                margin-top: 15px; 
+                margin-bottom: 20px;
+                background: #fff;
+                border: 1px solid #eee;
+                padding: 5px;
+                border-radius: 4px;
             }
             
             .pdf-img {
-                max-height: 85vh; /* Etwas Puffer für Ränder */
-                width: auto;
-                max-width: 100%;
+                width: 100%; 
+                height: auto; 
+                display: block;
+                /* Limit height to ensures it fits on A4 even with margins */
+                max-height: 130mm !important; 
+                object-fit: contain;
             }
             
-            /* COLOR FIXES */
-            h1, h2, h3, .pdf-label { color: #000 !important; }
+            /* Force Text Colors */
+            h1, h2, h3, .pdf-label, .pdf-value { color: #000 !important; }
             .pdf-header { border-bottom-color: #0071e3 !important; }
         }
 
-        /* --- PDF LAYOUT (SCREEN PREVIEW) --- */
-        #print-view { display: none; } /* Hidden in Edit Mode */
+        /* --- SCREEN PREVIEW --- */
+        #print-view { display: none; } 
         
         .preview-mode #print-view {
             display: block;
             margin: 20px auto;
             max-width: 210mm;
+            min-height: 297mm;
             background: white;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             padding: 40px;
@@ -105,43 +141,27 @@
         .pdf-subtitle { font-size: 10pt; color: #86868b; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
         .pdf-meta { text-align: right; font-size: 10pt; color: #1d1d1f; }
         
-        /* Section logic */
-        .pdf-section { margin-bottom: 40px; }
         .pdf-section-title { font-size: 14pt; font-weight: 700; color: #1d1d1f; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; margin-bottom: 20px; }
         
-        /* Data Grid */
         .pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 40px; margin-bottom: 20px; }
         .pdf-field { margin-bottom: 5px; }
         .pdf-label { font-size: 8pt; color: #86868b; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
         .pdf-value { font-size: 11pt; color: #1d1d1f; font-weight: 500; border-bottom: 1px dotted #e5e5e5; padding-bottom: 2px; }
         .pdf-full-width { grid-column: span 2; }
 
-        /* --- BIG PHOTO STYLES --- */
-        .pdf-photos { margin-top: 25px; width: 100%; }
+        /* Photo Styles on Screen */
         .pdf-photo-title { 
             font-size: 10pt; font-weight: 700; color: #1d1d1f; 
             margin-bottom: 10px; border-left: 4px solid #0071e3; padding-left: 10px; 
             text-transform: uppercase; 
         }
         
-        /* Vertical Stack for Max Size */
         .pdf-photo-list { display: flex; flex-direction: column; gap: 20px; width: 100%; }
         
-        .pdf-img-container { 
-            width: 100%;
-            background: #fff;
-            border: 1px solid #e5e5e5;
-            padding: 5px;
-            border-radius: 4px;
-        }
-        
-        .pdf-img { 
-            width: 100%; 
-            height: auto; 
-            max-height: 900px; 
-            object-fit: contain; 
-            display: block;
-            background-color: #f9f9f9;
+        /* Screen only adjustments for photos */
+        @media screen {
+            .pdf-img { max-height: 600px; object-fit: contain; }
+            .pdf-img-container { border: 1px solid #e5e5e5; padding: 5px; border-radius: 4px; }
         }
     </style>
 </head>
@@ -153,7 +173,6 @@
     const { useState, useEffect, useRef } = React;
 
     // --- UTILS: IMAGE COMPRESSION ---
-    // Increased quality settings (1600px width, 0.8 quality)
     const compressImage = (base64Str, maxWidth = 1600) => {
         return new Promise((resolve) => {
             const img = new Image();
@@ -172,10 +191,10 @@
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                // Quality 0.8 for better looking photos
+                // Quality 0.8 for good print quality but smaller size
                 resolve(canvas.toDataURL('image/jpeg', 0.8));
             };
-            img.onerror = (err) => resolve(base64Str); // Fallback
+            img.onerror = (err) => resolve(base64Str);
         });
     };
 
@@ -202,7 +221,7 @@
         json: '<polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>'
     };
 
-    // --- PHOTO MANAGER (FIXED) ---
+    // --- PHOTO MANAGER ---
     const PhotoManager = ({ id, label, photos, setPhotos }) => {
         const fileInputRef = useRef(null);
         const currentPhotos = photos[id] || [];
@@ -211,12 +230,10 @@
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
-            // Process files sequentially to avoid memory spikes
             for (const file of files) {
                 await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onloadend = async () => {
-                        // Compress before setting state
                         const compressed = await compressImage(reader.result);
                         setPhotos(prev => ({ ...prev, [id]: [...(prev[id] || []), compressed] }));
                         resolve();
@@ -224,7 +241,7 @@
                     reader.readAsDataURL(file);
                 });
             }
-            e.target.value = null; // Reset input
+            e.target.value = null;
         };
 
         const handleRemove = (index) => setPhotos(prev => ({ ...prev, [id]: prev[id].filter((_, i) => i !== index) }));
@@ -240,12 +257,14 @@
                     {currentPhotos.map((photo, index) => (
                         <div key={index} className="relative aspect-square rounded-xl overflow-hidden border border-[#d2d2d7] bg-black group">
                             <img src={photo} className="w-full h-full object-cover" />
-                            <button onClick={() => handleRemove(index)} className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow hover:bg-red-600 z-10"><Icon path={icons.trash} size={12} /></button>
+                            <button onClick={() => handleRemove(index)} className="absolute top-1 right-1 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center shadow hover:bg-red-600 z-10">
+                                <Icon path={icons.trash} size={14} />
+                            </button>
                         </div>
                     ))}
-                    <div onClick={() => fileInputRef.current.click()} className="aspect-square rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#fbfbfd] hover:bg-[#f0f8ff] hover:border-[#0071e3] cursor-pointer flex flex-col items-center justify-center gap-1 transition-all">
-                        <Icon path={icons.plus} size={24} className="text-[#0071e3]" />
-                        <span className="text-[10px] font-medium text-[#86868b]">Hinzufügen</span>
+                    <div onClick={() => fileInputRef.current.click()} className="aspect-square rounded-xl border-2 border-dashed border-[#d2d2d7] bg-[#fbfbfd] hover:bg-[#f0f8ff] hover:border-[#0071e3] cursor-pointer flex flex-col items-center justify-center gap-1 transition-all active:scale-95">
+                        <Icon path={icons.plus} size={28} className="text-[#0071e3]" />
+                        <span className="text-[10px] font-medium text-[#86868b]">Foto</span>
                     </div>
                 </div>
             </div>
@@ -264,10 +283,10 @@
     );
 
     const TextInput = ({ label, value, onChange, width = "full", suffix, type="text", placeholder="" }) => (
-        <div className={`bg-[#f5f5f7] rounded-xl px-4 py-2 border border-transparent focus-within:bg-white focus-within:border-[#0071e3] transition-all ${width === 'half' ? 'col-span-1' : 'col-span-2'}`}>
+        <div className={`bg-[#f5f5f7] rounded-xl px-4 py-2 border border-transparent focus-within:bg-white focus-within:border-[#0071e3] transition-all ${width === 'half' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
             <label className="block text-xs text-[#86868b] mb-1">{label}</label>
             <div className="flex items-center">
-                <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="w-full bg-transparent outline-none text-[#1d1d1f]" />
+                <input type={type} value={value} onChange={onChange} placeholder={placeholder} className="w-full bg-transparent outline-none text-[#1d1d1f] p-1" />
                 {suffix && <span className="text-xs text-[#86868b] ml-1">{suffix}</span>}
             </div>
         </div>
@@ -276,7 +295,7 @@
     const SelectInput = ({ label, value, onChange, options, width = "half" }) => (
         <div className={`bg-[#f5f5f7] rounded-xl px-4 py-2 border border-transparent focus-within:bg-white focus-within:border-[#0071e3] col-span-2 ${width === 'half' ? 'md:col-span-1' : ''}`}>
             <label className="block text-xs text-[#86868b] mb-1">{label}</label>
-            <select value={value} onChange={onChange} className="w-full bg-transparent outline-none text-[#1d1d1f] cursor-pointer appearance-none">
+            <select value={value} onChange={onChange} className="w-full bg-transparent outline-none text-[#1d1d1f] cursor-pointer appearance-none p-1">
                 <option value="">Bitte wählen...</option>
                 {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
             </select>
@@ -300,7 +319,7 @@
                         <button 
                             key={opt} 
                             onClick={() => toggle(opt)}
-                            className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all ${
+                            className={`px-3 py-2 text-xs font-medium rounded-full border transition-all active:scale-95 ${
                                 selected.includes(opt) 
                                     ? 'bg-[#0071e3] text-white border-[#0071e3]' 
                                     : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
@@ -324,7 +343,7 @@
         </div>
     );
 
-    // --- PREVIEW LAYOUT ---
+    // --- PREVIEW LAYOUT (Optimized for iPad Print) ---
     const PreviewLayout = ({ data, photos }) => {
         const renderField = (label, value, fullWidth = false) => (
             <div className={`pdf-field ${fullWidth ? 'pdf-full-width' : ''}`}>
@@ -334,7 +353,7 @@
         );
         const renderBool = (v) => v ? "Ja" : "Nein";
         
-        // STACKED LAYOUT FOR PRINTING
+        // STACKED LAYOUT FOR PRINTING WITH NO CUT-OFFS
         const renderPhotoGrid = (id, title) => {
             const pics = photos[id] || [];
             if(pics.length === 0) return null;
@@ -546,12 +565,12 @@
         // Save to LocalStorage on change
         useEffect(() => { localStorage.setItem('vot_data', JSON.stringify(data)); }, [data]);
         
-        // Photos Persistence with Quota Check
+        // Photos Persistence
         useEffect(() => {
             try {
                 localStorage.setItem('vot_photos', JSON.stringify(photos));
             } catch (e) {
-                console.warn("Storage quota exceeded, photos will not persist after reload but work in this session.");
+                console.warn("Storage quota exceeded.");
             }
         }, [photos]);
 
@@ -610,36 +629,34 @@
                 
                 {view === 'preview' ? (
                     <div className="bg-gray-100 min-h-screen pb-20">
-                        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shadow-sm no-print">
+                        <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center shadow-sm no-print">
                             <button onClick={() => setView('input')} className="text-[#0071e3] font-medium flex items-center gap-1 hover:underline">
-                                <Icon path={icons.edit} /> Zurück zur Bearbeitung
+                                <Icon path={icons.edit} /> Zurück
                             </button>
-                            <div className="flex gap-4 items-center">
-                                <button 
-                                    onClick={handlePrint} 
-                                    className="px-6 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all bg-[#0071e3] text-white hover:bg-[#005bb5]"
-                                >
-                                    <Icon path={icons.print} /> Drucken / PDF
-                                </button>
-                            </div>
+                            <button 
+                                onClick={handlePrint} 
+                                className="px-5 py-2 rounded-full font-bold shadow-lg flex items-center gap-2 transition-all bg-[#0071e3] text-white hover:bg-[#005bb5]"
+                            >
+                                <Icon path={icons.print} /> PDF / Drucken
+                            </button>
                         </div>
-                        <div className="py-8">
+                        <div className="py-4 px-2">
                             <PreviewLayout data={data} photos={photos} />
                         </div>
                     </div>
                 ) : (
                     <div className="pb-32">
-                        <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-[#d2d2d7] no-print">
+                        <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-[#d2d2d7] no-print">
                             <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-                                <div className="font-semibold text-lg">Mission Solar <span className="text-gray-400 text-sm">| VOT V29</span></div>
+                                <div className="font-semibold text-lg">Mission Solar <span className="text-gray-400 text-sm">| VOT V31</span></div>
                                 <div className="flex gap-2 items-center">
-                                    <button onClick={handleReset} className="text-xs font-bold text-red-500 uppercase px-2 py-1 border border-red-200 rounded bg-red-50">Reset</button>
-                                    <div className="text-xs bg-gray-100 px-2 py-1 rounded">Print Fix</div>
+                                    <button onClick={handleReset} className="text-xs font-bold text-red-500 uppercase px-3 py-1.5 border border-red-200 rounded bg-red-50 active:scale-95 transition-transform">Reset</button>
+                                    <div className="text-xs bg-green-100 text-green-700 font-bold px-2 py-1 rounded">iPad</div>
                                 </div>
                             </div>
                         </nav>
 
-                        <main className="max-w-5xl mx-auto pt-8 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <main className="max-w-5xl mx-auto pt-6 px-4 grid grid-cols-1 lg:grid-cols-12 gap-8">
                             
                             {/* SIDEBAR */}
                             <div className="lg:col-span-4 hidden lg:block no-print">
@@ -662,14 +679,14 @@
                                     </div>
                                     <div className="bg-[#fff9e6] p-5 rounded-2xl border border-[#ffeeba] shadow-sm relative">
                                         <h3 className="font-bold text-[#b58b00] mb-2 text-sm uppercase">Notizen / Kundenwünsche</h3>
-                                        <textarea className="w-full h-64 bg-transparent resize-none outline-none text-sm" placeholder="Allgemeine Notizen..." value={data.generalNotes} onChange={(e) => update('generalNotes', e.target.value)}></textarea>
+                                        <textarea className="w-full h-64 bg-transparent resize-none outline-none text-sm p-1" placeholder="Allgemeine Notizen..." value={data.generalNotes} onChange={(e) => update('generalNotes', e.target.value)}></textarea>
                                     </div>
                                 </div>
                             </div>
 
                             {/* FORM */}
                             <div className="lg:col-span-8 space-y-6">
-                                <div className="lg:hidden p-4 bg-[#fff9e6] rounded-xl border border-[#ffeeba] mb-4"><textarea className="w-full h-24 bg-transparent resize-none text-sm outline-none" placeholder="Allgemeine Notizen..." value={data.generalNotes} onChange={(e) => update('generalNotes', e.target.value)} /></div>
+                                <div className="lg:hidden p-4 bg-[#fff9e6] rounded-xl border border-[#ffeeba] mb-4"><textarea className="w-full h-24 bg-transparent resize-none text-sm outline-none p-1" placeholder="Allgemeine Notizen..." value={data.generalNotes} onChange={(e) => update('generalNotes', e.target.value)} /></div>
 
                                 {/* 1. Kundendaten */}
                                 <Section id="sec-1" icon={icons.user} title="1. Kundendaten">
@@ -791,7 +808,7 @@
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-3 mb-2">
-                                                <TextInput label="Versickerungskapazität / Bodenbeschaffenheit" value={data.infiltrationCapacity} onChange={e => update('infiltrationCapacity', e.target.value)} width="full" placeholder="z.B. Lehm, Kies, etc." />
+                                                <TextInput label="Versickerungskapazität / Boden" value={data.infiltrationCapacity} onChange={e => update('infiltrationCapacity', e.target.value)} width="full" placeholder="z.B. Lehm, Kies, etc." />
                                                 <SelectInput label="Art der Kondensatableitung" value={data.condensateDrainage} onChange={e => update('condensateDrainage', e.target.value)} options={['Kiesbett', 'Kanalanschluss', 'Dachrinne']} width="full" />
                                             </div>
 
@@ -858,11 +875,13 @@
                             </div>
                         </main>
 
-                        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur border-t border-[#d2d2d7] p-4 z-50 no-print">
+                        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-[#d2d2d7] p-4 z-50 no-print safe-area-pb">
                             <div className="max-w-5xl mx-auto flex gap-3">
-                                <button onClick={handleJsonExport} className="flex-1 bg-gray-100 py-3 rounded-full font-medium flex justify-center items-center gap-2"><Icon path={icons.json} size={18}/> JSON</button>
-                                <button onClick={() => setView('preview')} className="flex-1 bg-[#0071e3] text-white py-3 rounded-full font-medium shadow-lg hover:shadow-xl hover:bg-[#005bb5] transition-all flex justify-center items-center gap-2">
-                                    <Icon path={icons.check} size={18}/> Fertigstellen
+                                <button onClick={handleJsonExport} className="flex-1 bg-gray-100 py-3.5 rounded-full font-medium flex justify-center items-center gap-2 active:bg-gray-200 transition-colors text-sm">
+                                    <Icon path={icons.json} size={18}/> Speichern
+                                </button>
+                                <button onClick={() => setView('preview')} className="flex-1 bg-[#0071e3] text-white py-3.5 rounded-full font-medium shadow-lg hover:shadow-xl hover:bg-[#005bb5] transition-all flex justify-center items-center gap-2 active:scale-95 text-sm">
+                                    <Icon path={icons.check} size={18}/> Fertig
                                 </button>
                             </div>
                         </div>
